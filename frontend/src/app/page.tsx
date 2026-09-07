@@ -313,14 +313,14 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070a13] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 ${
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 backdrop-blur-xl ${
             toast.type === "success"
-              ? "bg-emerald-950/90 text-emerald-200 border-emerald-700/60"
-              : "bg-rose-950/90 text-rose-200 border-rose-700/60"
+              ? "bg-emerald-950/80 text-emerald-200 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+              : "bg-rose-950/80 text-rose-200 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.25)]"
           }`}
         >
           <span className="text-lg">{toast.type === "success" ? "✓" : "⚠"}</span>
@@ -328,24 +328,24 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Top Navigation Bar */}
-      <header className="border-b border-slate-800/80 bg-[#0c1222]/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      {/* Top Navigation Bar with Glass Bevel */}
+      <header className="glass-panel sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 rounded-b-2xl mx-2 mt-1 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.1)]">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 font-black text-xl text-white">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/30 font-black text-xl text-white">
             OD
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black tracking-tight text-white">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-black tracking-tight text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">
                 ODINVENTARIO
               </h1>
-              <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-full">
-                Control Institucional & Bienes Nacionales
+              <span className="px-2.5 py-0.5 text-[11px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                Bienes Nacionales & Gestión Omni-Stack
               </span>
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Servidor Activo • 192.168.100.2
+            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"></span>
+              Servidor Activo • 192.168.100.2:8088
             </p>
           </div>
         </div>
@@ -355,7 +355,7 @@ export default function Dashboard() {
           <button
             onClick={fetchData}
             title="Refrescar datos"
-            className="p-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white transition-colors"
+            className="p-2.5 rounded-xl glass-panel hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -364,7 +364,7 @@ export default function Dashboard() {
 
           <button
             onClick={() => setIsBulkModalOpen(true)}
-            className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700/90 border border-slate-700 text-slate-200 font-medium text-sm flex items-center gap-2 transition-all hover:border-slate-600 shadow-sm"
+            className="px-4 py-2.5 rounded-xl glass-panel hover:border-cyan-400/50 text-slate-200 font-medium text-sm flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(6,182,212,0.12)] hover:shadow-[0_0_20px_rgba(6,182,212,0.25)]"
           >
             <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -374,7 +374,7 @@ export default function Dashboard() {
 
           <button
             onClick={handleOpenNewModal}
-            className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-sm flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all active:scale-95"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-sm flex items-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/25 transition-all active:scale-95"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -385,82 +385,92 @@ export default function Dashboard() {
       </header>
 
       <main className="p-6 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6">
-        {/* KPI Statistics Cards */}
+        {/* KPI Statistics Cards - Glassmorphism & Subtle Neon Glow */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Catálogo */}
-          <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-blue-500/40 transition-all">
-            <div className="absolute -right-3 -top-3 w-20 h-20 bg-blue-600/10 rounded-full blur-xl group-hover:bg-blue-600/20 transition-all"></div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Total Catálogo
-            </p>
-            <div className="flex items-baseline justify-between mt-2">
-              <h3 className="text-3xl font-extrabold text-white tracking-tight">
+          <div className="p-5 rounded-2xl glass-panel glass-glow-blue relative overflow-hidden group cursor-default">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Total Catálogo
+              </p>
+              <span className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span>
+            </div>
+            <div className="flex items-baseline justify-between mt-3">
+              <h3 className="text-3xl font-black text-white tracking-tight drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]">
                 {stats.total_items}
               </h3>
-              <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 font-medium">
                 {stats.categories_count} categorías
               </span>
             </div>
           </div>
 
           {/* Card 2: Bienes Nacionales */}
-          <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-purple-500/40 transition-all">
-            <div className="absolute -right-3 -top-3 w-20 h-20 bg-purple-600/10 rounded-full blur-xl group-hover:bg-purple-600/20 transition-all"></div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Bienes Nacionales (BN)
-            </p>
-            <div className="flex items-baseline justify-between mt-2">
-              <h3 className="text-3xl font-extrabold text-purple-400 tracking-tight">
+          <div className="p-5 rounded-2xl glass-panel glass-glow-purple relative overflow-hidden group cursor-default">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-purple-300 uppercase tracking-wider">
+                Bienes Nacionales (BN)
+              </p>
+              <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"></span>
+            </div>
+            <div className="flex items-baseline justify-between mt-3">
+              <h3 className="text-3xl font-black text-purple-200 tracking-tight drop-shadow-[0_0_12px_rgba(192,132,252,0.2)]">
                 {stats.bien_nacional_count}
               </h3>
-              <span className="text-xs text-purple-300 font-medium">identificados</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-400/30 font-medium">
+                Identificados
+              </span>
             </div>
           </div>
 
-          {/* Card 3: Total Stock & Valoración */}
-          <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-emerald-500/40 transition-all">
-            <div className="absolute -right-3 -top-3 w-20 h-20 bg-emerald-600/10 rounded-full blur-xl group-hover:bg-emerald-600/20 transition-all"></div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Stock ({stats.total_stock} uds) • Valor
-            </p>
-            <div className="flex items-baseline justify-between mt-2">
-              <h3 className="text-3xl font-extrabold text-emerald-400 tracking-tight">
+          {/* Card 3: Stock & Valoración */}
+          <div className="p-5 rounded-2xl glass-panel glass-glow-emerald relative overflow-hidden group cursor-default">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider">
+                Stock ({stats.total_stock} uds) • Valor
+              </p>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+            </div>
+            <div className="flex items-baseline justify-between mt-3">
+              <h3 className="text-3xl font-black text-emerald-300 tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.2)]">
                 ${stats.total_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </h3>
-              <span className="text-xs text-emerald-500 font-semibold">USD</span>
+              <span className="text-xs font-bold text-emerald-400/80">USD</span>
             </div>
           </div>
 
           {/* Card 4: Low Stock Alert */}
-          <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-amber-500/40 transition-all">
-            <div className="absolute -right-3 -top-3 w-20 h-20 bg-amber-600/10 rounded-full blur-xl group-hover:bg-amber-600/20 transition-all"></div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Stock Crítico (≤ 3)
-            </p>
-            <div className="flex items-baseline justify-between mt-2">
-              <h3 className="text-3xl font-extrabold text-amber-400 tracking-tight">
+          <div className="p-5 rounded-2xl glass-panel glass-glow-amber relative overflow-hidden group cursor-default">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                Stock Crítico (≤ 3)
+              </p>
+              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
+            </div>
+            <div className="flex items-baseline justify-between mt-3">
+              <h3 className="text-3xl font-black text-amber-300 tracking-tight drop-shadow-[0_0_12px_rgba(245,158,11,0.2)]">
                 {stats.low_stock}
               </h3>
               <span
-                className={`text-xs px-2 py-0.5 rounded font-medium ${
+                className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
                   stats.low_stock > 0
-                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                    : "bg-slate-800 text-slate-400"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                    : "bg-slate-800/60 text-slate-400 border-slate-700/60"
                 }`}
               >
-                {stats.low_stock > 0 ? "Requiere Atención" : "Óptimo"}
+                {stats.low_stock > 0 ? "Atención Requerida" : "Óptimo"}
               </span>
             </div>
           </div>
         </section>
 
-        {/* Control and Filter Bar */}
-        <section className="bg-[#0f172a]/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        {/* Control and Filter Bar - Glass Beveled */}
+        <section className="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
           <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
             {/* Search Input */}
             <div className="relative flex-1 min-w-[220px]">
               <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-cyan-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </span>
@@ -469,7 +479,7 @@ export default function Dashboard() {
                 placeholder="Buscar por Nombre, N° Bien Nacional, SKU, Categoría..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-900/90 border border-slate-700/70 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(56,189,248,0.25)] transition-all"
               />
               {searchTerm && (
                 <button
@@ -485,7 +495,7 @@ export default function Dashboard() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="py-2 px-3.5 bg-slate-900/90 border border-slate-700/70 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+              className="py-2 px-3.5 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
             >
               <option value="Todas">Categoría: Todas</option>
               {stats.categories.map((cat) => (
@@ -499,7 +509,7 @@ export default function Dashboard() {
             <select
               value={selectedTipo}
               onChange={(e) => setSelectedTipo(e.target.value)}
-              className="py-2 px-3.5 bg-slate-900/90 border border-slate-700/70 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+              className="py-2 px-3.5 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
             >
               <option value="Todos">Tipo: Todos</option>
               {DEFAULT_TIPOS.map((tp) => (
@@ -510,12 +520,12 @@ export default function Dashboard() {
             </select>
 
             {/* Stock Level Filter Tabs */}
-            <div className="flex items-center bg-slate-900/90 border border-slate-700/70 rounded-xl p-1 text-xs">
+            <div className="flex items-center bg-[#080d1a]/80 border border-slate-700/60 rounded-xl p-1 text-xs">
               <button
                 onClick={() => setStockFilter("todos")}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                   stockFilter === "todos"
-                    ? "bg-blue-600 text-white shadow-sm"
+                    ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.4)]"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -525,7 +535,7 @@ export default function Dashboard() {
                 onClick={() => setStockFilter("bajo")}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                   stockFilter === "bajo"
-                    ? "bg-amber-600 text-white shadow-sm"
+                    ? "bg-amber-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.4)]"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -535,7 +545,7 @@ export default function Dashboard() {
                 onClick={() => setStockFilter("ok")}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                   stockFilter === "ok"
-                    ? "bg-emerald-600 text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-[0_0_10px_rgba(5,150,105,0.4)]"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -545,34 +555,34 @@ export default function Dashboard() {
           </div>
 
           <div className="text-xs text-slate-400 font-medium whitespace-nowrap">
-            Mostrando <span className="text-white font-bold">{filteredItems.length}</span> de{" "}
+            Mostrando <span className="text-cyan-300 font-bold">{filteredItems.length}</span> de{" "}
             <span className="text-white font-bold">{items.length}</span> registros
           </div>
         </section>
 
-        {/* Main Data Table */}
-        <section className="bg-[#0e1628]/80 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex-1 flex flex-col">
+        {/* Main Data Table - Glass Beveled */}
+        <section className="glass-panel rounded-2xl overflow-hidden shadow-2xl flex-1 flex flex-col border border-cyan-500/20">
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 bg-[#090e1c] text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Código / SKU</th>
-                  <th className="py-3.5 px-4">Bien Nacional (BN)</th>
-                  <th className="py-3.5 px-4">Artículo / Descripción</th>
-                  <th className="py-3.5 px-4">Tipo & Categoría</th>
-                  <th className="py-3.5 px-4 text-center">Stock</th>
-                  <th className="py-3.5 px-4 text-right">Precio Unitario</th>
-                  <th className="py-3.5 px-4 text-right">Subtotal</th>
-                  <th className="py-3.5 px-4">Ubicación</th>
-                  <th className="py-3.5 px-4 text-center">Acciones</th>
+                <tr className="border-b border-white/10 bg-[#080d1a]/70 text-xs font-semibold text-slate-300 uppercase tracking-wider backdrop-blur-md">
+                  <th className="py-4 px-4">Código / SKU</th>
+                  <th className="py-4 px-4">Bien Nacional (BN)</th>
+                  <th className="py-4 px-4">Artículo / Descripción</th>
+                  <th className="py-4 px-4">Tipo & Categoría</th>
+                  <th className="py-4 px-4 text-center">Stock</th>
+                  <th className="py-4 px-4 text-right">Precio Unitario</th>
+                  <th className="py-4 px-4 text-right">Subtotal</th>
+                  <th className="py-4 px-4">Ubicación</th>
+                  <th className="py-4 px-4 text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-800/40">
                 {loading ? (
                   <tr>
                     <td colSpan={9} className="py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-sm">Cargando catálogo institucional...</p>
                       </div>
                     </td>
@@ -581,10 +591,10 @@ export default function Dashboard() {
                   <tr>
                     <td colSpan={9} className="py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-500 text-xl">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-800/50 border border-slate-700 flex items-center justify-center text-slate-400 text-xl shadow-inner">
                           🏷️
                         </div>
-                        <p className="text-base font-semibold text-slate-300">
+                        <p className="text-base font-semibold text-slate-200">
                           No se encontraron artículos
                         </p>
                         <p className="text-xs text-slate-500 max-w-sm">
@@ -592,7 +602,7 @@ export default function Dashboard() {
                         </p>
                         <button
                           onClick={handleOpenNewModal}
-                          className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium"
+                          className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-[0_0_15px_rgba(37,99,235,0.3)]"
                         >
                           + Registrar Primer Artículo
                         </button>
@@ -607,7 +617,7 @@ export default function Dashboard() {
                     return (
                       <tr
                         key={item.id}
-                        className="hover:bg-slate-800/40 transition-colors group"
+                        className="hover:bg-blue-500/10 transition-colors group"
                       >
                         {/* SKU */}
                         <td className="py-3.5 px-4 font-mono text-xs text-slate-400 font-semibold whitespace-nowrap">
@@ -617,7 +627,7 @@ export default function Dashboard() {
                         {/* Bien Nacional */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {item.numero_bien_nacional ? (
-                            <span className="px-2 py-1 text-xs rounded-md bg-purple-950/70 text-purple-300 border border-purple-800/80 font-mono font-bold">
+                            <span className="px-2.5 py-1 text-xs rounded-lg bg-purple-950/80 text-purple-300 border border-purple-600/40 font-mono font-bold shadow-[0_0_8px_rgba(147,51,234,0.2)]">
                               {item.numero_bien_nacional}
                             </span>
                           ) : (
@@ -627,7 +637,7 @@ export default function Dashboard() {
 
                         {/* Nombre & Descripción */}
                         <td className="py-3.5 px-4 max-w-xs">
-                          <div className="font-semibold text-slate-100 group-hover:text-blue-300 transition-colors">
+                          <div className="font-semibold text-slate-100 group-hover:text-cyan-300 transition-colors">
                             {item.nombre}
                           </div>
                           {item.descripcion && (
@@ -643,7 +653,7 @@ export default function Dashboard() {
                             <span className="text-[11px] font-semibold text-cyan-400">
                               {item.tipo_articulo || "Activo Fijo"}
                             </span>
-                            <span className="px-2 py-0.5 text-[11px] rounded bg-slate-800 text-slate-300 border border-slate-700/80 w-fit">
+                            <span className="px-2 py-0.5 text-[11px] rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/80 w-fit font-medium">
                               {item.categoria || "General"}
                             </span>
                           </div>
@@ -651,12 +661,12 @@ export default function Dashboard() {
 
                         {/* Stock Controls */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg p-1">
+                          <div className="inline-flex items-center gap-1.5 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl p-1 shadow-inner">
                             <button
                               onClick={() => handleAdjustStock(item.id, -1)}
                               disabled={item.cantidad <= 0}
                               title="Restar 1"
-                              className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                              className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                             >
                               -
                             </button>
@@ -670,7 +680,7 @@ export default function Dashboard() {
                             <button
                               onClick={() => handleAdjustStock(item.id, 1)}
                               title="Sumar 1"
-                              className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                              className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
                             >
                               +
                             </button>
@@ -683,15 +693,15 @@ export default function Dashboard() {
                         </td>
 
                         {/* Subtotal */}
-                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-100 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-100 whitespace-nowrap">
                           ${subtotal.toFixed(2)}
                         </td>
 
                         {/* Ubicación */}
-                        <td className="py-3.5 px-4 text-xs text-slate-400 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-xs text-slate-300 whitespace-nowrap">
                           {item.ubicacion ? (
-                            <span className="flex items-center gap-1">
-                              <span className="text-slate-500">📍</span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-cyan-400">📍</span>
                               {item.ubicacion}
                             </span>
                           ) : (
@@ -705,7 +715,7 @@ export default function Dashboard() {
                             <button
                               onClick={() => handleOpenEditModal(item)}
                               title="Editar / Modificar"
-                              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-blue-600/30 text-slate-300 hover:text-blue-400 border border-slate-700/60 transition-all"
+                              className="p-2 rounded-xl bg-slate-800/80 hover:bg-blue-600/30 text-slate-300 hover:text-blue-300 border border-slate-700/60 transition-all shadow-sm"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -714,7 +724,7 @@ export default function Dashboard() {
                             <button
                               onClick={() => handleDeleteItem(item.id, item.nombre)}
                               title="Eliminar Artículo"
-                              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 border border-slate-700/60 transition-all"
+                              className="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 border border-slate-700/60 transition-all shadow-sm"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -732,18 +742,18 @@ export default function Dashboard() {
         </section>
       </main>
 
-      {/* MODAL: Crear / Modificar Ítem */}
+      {/* MODAL: Crear / Modificar Ítem con Glass Bevel */}
       {isItemModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl p-6 relative flex flex-col gap-4 my-8">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in overflow-y-auto">
+          <div className="glass-panel rounded-3xl w-full max-w-xl p-6 relative flex flex-col gap-4 my-8 border border-cyan-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(56,189,248,0.15)]">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></span>
                 {editingItem ? `Modificar: ${editingItem.nombre}` : "Registrar Artículo / Bien Nacional"}
               </h3>
               <button
                 onClick={() => setIsItemModalOpen(false)}
-                className="text-slate-400 hover:text-white text-lg"
+                className="text-slate-400 hover:text-white text-lg p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
                 ✕
               </button>
@@ -760,7 +770,7 @@ export default function Dashboard() {
                     value={formData.codigo}
                     onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                     placeholder="Ej. SRV-001"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 font-mono text-xs"
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400 font-mono text-xs"
                   />
                 </div>
 
@@ -773,7 +783,7 @@ export default function Dashboard() {
                     value={formData.numero_bien_nacional}
                     onChange={(e) => setFormData({ ...formData, numero_bien_nacional: e.target.value })}
                     placeholder="Ej. BN-2024-00412"
-                    className="w-full px-3 py-2 bg-slate-900 border border-purple-800/80 rounded-xl text-purple-200 placeholder-purple-900/60 focus:outline-none focus:border-purple-500 font-mono text-xs"
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-purple-700/60 rounded-xl text-purple-200 placeholder-purple-900/60 focus:outline-none focus:border-purple-400 font-mono text-xs"
                   />
                 </div>
               </div>
@@ -788,7 +798,7 @@ export default function Dashboard() {
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   placeholder="Ej. Computadora de Escritorio Dell OptiPlex 7090"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -801,7 +811,7 @@ export default function Dashboard() {
                   <select
                     value={formData.tipo_articulo}
                     onChange={(e) => setFormData({ ...formData, tipo_articulo: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-500 text-xs mb-1.5 cursor-pointer"
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400 text-xs mb-1.5 cursor-pointer"
                   >
                     {DEFAULT_TIPOS.map((tp) => (
                       <option key={tp} value={tp}>
@@ -816,7 +826,7 @@ export default function Dashboard() {
                       placeholder="Escribe nuevo tipo..."
                       value={customTipo}
                       onChange={(e) => setCustomTipo(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-950 border border-cyan-700 rounded-lg text-xs text-cyan-200"
+                      className="w-full px-3 py-1.5 bg-[#050812] border border-cyan-500/80 rounded-lg text-xs text-cyan-200"
                     />
                   )}
                 </div>
@@ -828,7 +838,7 @@ export default function Dashboard() {
                   <select
                     value={formData.categoria}
                     onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-xs mb-1.5 cursor-pointer"
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400 text-xs mb-1.5 cursor-pointer"
                   >
                     {stats.categories.map((cat) => (
                       <option key={cat} value={cat}>
@@ -843,7 +853,7 @@ export default function Dashboard() {
                       placeholder="Nombre de la nueva categoría..."
                       value={customCategory}
                       onChange={(e) => setCustomCategory(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-950 border border-blue-700 rounded-lg text-xs text-blue-200"
+                      className="w-full px-3 py-1.5 bg-[#050812] border border-blue-500/80 rounded-lg text-xs text-blue-200"
                     />
                   )}
                 </div>
@@ -860,7 +870,7 @@ export default function Dashboard() {
                     min="0"
                     value={formData.cantidad}
                     onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
                 <div>
@@ -873,7 +883,7 @@ export default function Dashboard() {
                     min="0"
                     value={formData.precio_unitario}
                     onChange={(e) => setFormData({ ...formData, precio_unitario: parseFloat(e.target.value) || 0.0 })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
               </div>
@@ -887,7 +897,7 @@ export default function Dashboard() {
                   value={formData.ubicacion}
                   onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
                   placeholder="Ej. Gerencia de Sistemas - Oficina 204"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -900,21 +910,21 @@ export default function Dashboard() {
                   value={formData.descripcion}
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   placeholder="Marca, modelo, número de serie o condiciones del bien..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsItemModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-colors"
+                  className="px-4 py-2 rounded-xl glass-panel hover:bg-slate-800 text-slate-300 font-medium text-xs transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-lg shadow-blue-600/30 transition-all"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-xs shadow-[0_0_15px_rgba(59,130,246,0.4)] border border-white/20 transition-all"
                 >
                   {editingItem ? "Guardar Modificaciones" : "Registrar Artículo"}
                 </button>
@@ -924,29 +934,29 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* MODAL: Carga Masiva Inteligente */}
+      {/* MODAL: Carga Masiva con Glass Bevel */}
       {isBulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+          <div className="glass-panel rounded-3xl w-full max-w-lg shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(56,189,248,0.15)] p-6 relative flex flex-col gap-4 border border-cyan-500/30">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2.5">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
                 Carga Masiva con Inteligencia Artificial
               </h3>
               <button
                 onClick={() => setIsBulkModalOpen(false)}
-                className="text-slate-400 hover:text-white text-lg"
+                className="text-slate-400 hover:text-white text-lg p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-300">
               Adjunta una hoja de cálculo (Excel), documento Word o PDF. El motor de IA clasificará cada artículo, detectará si posee Bien Nacional o SKU, y lo ubicará automáticamente en el catálogo.
             </p>
 
             <form onSubmit={handleUploadSubmit} className="flex flex-col gap-4">
-              <div className="border-2 border-dashed border-slate-700 hover:border-cyan-500/70 rounded-2xl p-8 text-center bg-slate-900/60 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer relative">
+              <div className="border-2 border-dashed border-cyan-500/30 hover:border-cyan-400/80 rounded-2xl p-8 text-center bg-[#080d1a]/60 hover:bg-[#080d1a]/90 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer relative shadow-inner">
                 <input
                   type="file"
                   accept=".xlsx,.xls,.pdf,.docx,.doc"
@@ -957,7 +967,7 @@ export default function Dashboard() {
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                 />
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl mb-1">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl mb-1 shadow-[0_0_12px_rgba(6,182,212,0.2)] border border-cyan-500/20">
                   📑
                 </div>
                 <p className="text-sm font-semibold text-slate-200">
@@ -978,14 +988,14 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setIsBulkModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-colors"
+                  className="px-4 py-2 rounded-xl glass-panel hover:bg-slate-800 text-slate-300 font-medium text-xs transition-colors"
                 >
                   Cerrar
                 </button>
                 <button
                   type="submit"
                   disabled={uploading || !uploadFile}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-xs shadow-lg shadow-cyan-600/20 transition-all flex items-center gap-2"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] border border-white/20 transition-all flex items-center gap-2"
                 >
                   {uploading ? (
                     <>
