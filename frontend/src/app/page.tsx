@@ -92,6 +92,12 @@ export default function Dashboard() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isIosModalOpen, setIsIosModalOpen] = useState(false);
+
+  // PWA Installation State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isIosDevice, setIsIosDevice] = useState(false);
 
   // Editing Entities
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -142,6 +148,43 @@ export default function Dashboard() {
   const [formError, setFormError] = useState("");
 
   const API_URL = "/api";
+
+  // Detect PWA & iOS environment
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      setIsIosDevice(isIos);
+
+      const handleBeforeInstall = (e: any) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+        setIsInstallable(true);
+      };
+
+      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+      return () => {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      };
+    }
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (isIosDevice) {
+      setIsIosModalOpen(true);
+      return;
+    }
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === "accepted") {
+        showToast("¡Aplicación ODInventario instalada con éxito!");
+      }
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } else {
+      showToast("Puedes instalarla desde el menú o barra de navegación de tu navegador", "success");
+    }
+  };
 
   // Fetch All Core Data
   const fetchData = async () => {
@@ -564,14 +607,14 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white pb-20 md:pb-6">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 backdrop-blur-xl ${
+          className={`fixed bottom-20 md:bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 backdrop-blur-xl ${
             toast.type === "success"
-              ? "bg-emerald-950/85 text-emerald-200 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-              : "bg-rose-950/85 text-rose-200 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.3)]"
+              ? "bg-emerald-950/90 text-emerald-200 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+              : "bg-rose-950/90 text-rose-200 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.3)]"
           }`}
         >
           <span className="text-lg">{toast.type === "success" ? "✓" : "⚠"}</span>
@@ -580,7 +623,7 @@ export default function Dashboard() {
       )}
 
       {/* Top Header with Glass Bevel */}
-      <header className="glass-panel sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 rounded-b-2xl mx-2 mt-1 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.1)]">
+      <header className="glass-panel sticky top-0 z-40 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 rounded-b-2xl mx-1 sm:mx-2 mt-1 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.1)]">
         <button
           onClick={() => {
             setActiveTab("inventory");
@@ -590,21 +633,21 @@ export default function Dashboard() {
             setIsBulkModalOpen(false);
           }}
           title="Ir a la pantalla principal (Inventario General)"
-          className="flex items-center gap-4 group cursor-pointer text-left focus:outline-none"
+          className="flex items-center gap-3 sm:gap-4 group cursor-pointer text-left focus:outline-none"
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/30 font-black text-xl text-white group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] transition-all">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/30 font-black text-lg sm:text-xl text-white group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] transition-all">
             OD
           </div>
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-black tracking-tight text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)] group-hover:text-cyan-300 transition-colors">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)] group-hover:text-cyan-300 transition-colors">
                 ODINVENTARIO
               </h1>
-              <span className="px-2.5 py-0.5 text-[11px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                Bienes Nacionales & Gestión Institucional
+              <span className="hidden sm:inline px-2 py-0.5 text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                Bienes Nacionales & Gestión PWA
               </span>
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium">
+            <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"></span>
               Servidor Activo • 192.168.100.2:8088
             </p>
@@ -612,11 +655,22 @@ export default function Dashboard() {
         </button>
 
         {/* Global Quick Action Buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* PWA Install Button */}
+          <button
+            onClick={handleInstallApp}
+            title="Instalar como Aplicación en Windows, Android o iPhone"
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-white/25 transition-all active:scale-95 cursor-pointer"
+          >
+            <span>📲</span>
+            <span className="hidden sm:inline">Instalar App</span>
+            <span className="sm:hidden">Instalar</span>
+          </button>
+
           <button
             onClick={fetchData}
             title="Refrescar catálogo"
-            className="p-2.5 rounded-xl glass-panel hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer"
+            className="p-2 sm:p-2.5 rounded-xl glass-panel hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -625,7 +679,7 @@ export default function Dashboard() {
 
           <button
             onClick={() => setIsBulkModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl glass-panel hover:border-cyan-400/50 text-slate-200 font-medium text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] cursor-pointer"
+            className="hidden sm:flex px-3 py-2 rounded-xl glass-panel hover:border-cyan-400/50 text-slate-200 font-medium text-xs items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] cursor-pointer"
           >
             <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -635,21 +689,21 @@ export default function Dashboard() {
 
           <button
             onClick={handleOpenNewCategoryModal}
-            className="px-3 py-2 rounded-xl glass-panel hover:border-blue-400/60 text-blue-300 font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            className="hidden md:flex px-3 py-2 rounded-xl glass-panel hover:border-blue-400/60 text-blue-300 font-medium text-xs items-center gap-1.5 transition-all cursor-pointer"
           >
             <span>+ Categoría</span>
           </button>
 
           <button
             onClick={handleOpenNewTypeModal}
-            className="px-3 py-2 rounded-xl glass-panel hover:border-purple-400/60 text-purple-300 font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            className="hidden md:flex px-3 py-2 rounded-xl glass-panel hover:border-purple-400/60 text-purple-300 font-medium text-xs items-center gap-1.5 transition-all cursor-pointer"
           >
             <span>+ Tipo</span>
           </button>
 
           <button
             onClick={handleOpenNewItemModal}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/25 transition-all active:scale-95 cursor-pointer"
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/25 transition-all active:scale-95 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -660,10 +714,10 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content Area */}
-      <main className="p-6 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-5">
+      <main className="p-3 sm:p-6 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-5">
         
-        {/* Navigation Tabs with Glass Bevel */}
-        <nav className="glass-panel rounded-2xl p-1.5 flex items-center gap-1.5 shadow-lg border border-white/10">
+        {/* Navigation Tabs with Glass Bevel (Desktop & Tablet) */}
+        <nav className="hidden sm:flex glass-panel rounded-2xl p-1.5 items-center gap-1.5 shadow-lg border border-white/10">
           <button
             onClick={() => setActiveTab("inventory")}
             className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
@@ -724,58 +778,62 @@ export default function Dashboard() {
           </button>
         </nav>
 
+        {/* ========================================================================= */}
         {/* TAB 1: INVENTARIO GENERAL */}
+        {/* ========================================================================= */}
         {activeTab === "inventory" && (
           <div className="flex flex-col gap-5">
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl glass-panel glass-glow-blue relative overflow-hidden group cursor-default">
+            {/* KPI Statistics Cards */}
+            <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-4 sm:p-5 rounded-2xl glass-panel glass-glow-blue relative overflow-hidden group cursor-default">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Catálogo</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Total Catálogo</p>
                   <span className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span>
                 </div>
-                <div className="flex items-baseline justify-between mt-3">
-                  <h3 className="text-3xl font-black text-white tracking-tight drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]">{stats.total_items}</h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 font-medium">{categories.length} categorías</span>
+                <div className="flex items-baseline justify-between mt-2 sm:mt-3">
+                  <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]">{stats.total_items}</h3>
+                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 font-medium">{categories.length} cats</span>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl glass-panel glass-glow-purple relative overflow-hidden group cursor-default">
+              <div className="p-4 sm:p-5 rounded-2xl glass-panel glass-glow-purple relative overflow-hidden group cursor-default">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-purple-300 uppercase tracking-wider">Bienes Nacionales (BN)</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-purple-300 uppercase tracking-wider">Bienes Nac. (BN)</p>
                   <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"></span>
                 </div>
-                <div className="flex items-baseline justify-between mt-3">
-                  <h3 className="text-3xl font-black text-purple-200 tracking-tight drop-shadow-[0_0_12px_rgba(192,132,252,0.2)]">{stats.bien_nacional_count}</h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-400/30 font-medium">Identificados</span>
+                <div className="flex items-baseline justify-between mt-2 sm:mt-3">
+                  <h3 className="text-2xl sm:text-3xl font-black text-purple-200 tracking-tight drop-shadow-[0_0_12px_rgba(192,132,252,0.2)]">{stats.bien_nacional_count}</h3>
+                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-400/30 font-medium">Con BN</span>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl glass-panel glass-glow-emerald relative overflow-hidden group cursor-default">
+              <div className="p-4 sm:p-5 rounded-2xl glass-panel glass-glow-emerald relative overflow-hidden group cursor-default">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Stock ({stats.total_stock} uds) • Valor</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-emerald-300 uppercase tracking-wider">Stock & Valor</p>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
                 </div>
-                <div className="flex items-baseline justify-between mt-3">
-                  <h3 className="text-3xl font-black text-emerald-300 tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.2)]">${stats.total_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</h3>
-                  <span className="text-xs font-bold text-emerald-400/80">USD</span>
+                <div className="flex items-baseline justify-between mt-2 sm:mt-3">
+                  <h3 className="text-xl sm:text-3xl font-black text-emerald-300 tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] truncate">${stats.total_value.toLocaleString("en-US", { minimumFractionDigits: 0 })}</h3>
+                  <span className="text-[10px] sm:text-xs font-bold text-emerald-400/80">({stats.total_stock} u.)</span>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl glass-panel glass-glow-amber relative overflow-hidden group cursor-default">
+              <div className="p-4 sm:p-5 rounded-2xl glass-panel glass-glow-amber relative overflow-hidden group cursor-default">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">Stock Crítico (≤ 3)</p>
+                  <p className="text-[10px] sm:text-xs font-bold text-amber-300 uppercase tracking-wider">Stock Crítico</p>
                   <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
                 </div>
-                <div className="flex items-baseline justify-between mt-3">
-                  <h3 className="text-3xl font-black text-amber-300 tracking-tight drop-shadow-[0_0_12px_rgba(245,158,11,0.2)]">{stats.low_stock}</h3>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${stats.low_stock > 0 ? "bg-amber-500/20 text-amber-300 border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]" : "bg-slate-800/60 text-slate-400 border-slate-700/60"}`}>{stats.low_stock > 0 ? "Atención Requerida" : "Óptimo"}</span>
+                <div className="flex items-baseline justify-between mt-2 sm:mt-3">
+                  <h3 className="text-2xl sm:text-3xl font-black text-amber-300 tracking-tight drop-shadow-[0_0_12px_rgba(245,158,11,0.2)]">{stats.low_stock}</h3>
+                  <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-semibold border ${stats.low_stock > 0 ? "bg-amber-500/20 text-amber-300 border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]" : "bg-slate-800/60 text-slate-400 border-slate-700/60"}`}>{stats.low_stock > 0 ? "Atención" : "Óptimo"}</span>
                 </div>
               </div>
             </section>
 
-            <section className="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-              <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-                <div className="relative flex-1 min-w-[220px]">
+            {/* Filters Bar */}
+            <section className="glass-panel rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+              <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[260px]">
+                <div className="relative flex-1 min-w-[200px]">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <svg className="w-4 h-4 text-cyan-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -783,10 +841,10 @@ export default function Dashboard() {
                   </span>
                   <input
                     type="text"
-                    placeholder="Buscar por Nombre, N° Bien Nacional, SKU, Ubicación..."
+                    placeholder="Buscar Nombre, BN, SKU..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(56,189,248,0.25)] transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(56,189,248,0.25)] transition-all"
                   />
                   {searchTerm && (
                     <button onClick={() => setSearchTerm("")} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white text-xs">✕</button>
@@ -796,7 +854,7 @@ export default function Dashboard() {
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="py-2 px-3.5 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                  className="py-2 px-3 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
                 >
                   <option value="Todas">Categoría: Todas</option>
                   {categories.map((cat) => (
@@ -807,7 +865,7 @@ export default function Dashboard() {
                 <select
                   value={selectedTipo}
                   onChange={(e) => setSelectedTipo(e.target.value)}
-                  className="py-2 px-3.5 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                  className="py-2 px-3 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
                 >
                   <option value="Todos">Tipo: Todos</option>
                   {types.map((tp) => (
@@ -815,29 +873,28 @@ export default function Dashboard() {
                   ))}
                 </select>
 
-                <div className="flex items-center bg-[#080d1a]/80 border border-slate-700/60 rounded-xl p-1 text-xs">
+                <div className="flex items-center bg-[#080d1a]/80 border border-slate-700/60 rounded-xl p-0.5 text-xs">
                   <button
                     onClick={() => setStockFilter("todos")}
-                    className={`px-3 py-1.5 rounded-lg font-medium transition-all ${stockFilter === "todos" ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "text-slate-400 hover:text-slate-200"}`}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${stockFilter === "todos" ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "text-slate-400 hover:text-slate-200"}`}
                   >Todos</button>
                   <button
                     onClick={() => setStockFilter("bajo")}
-                    className={`px-3 py-1.5 rounded-lg font-medium transition-all ${stockFilter === "bajo" ? "bg-amber-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.4)]" : "text-slate-400 hover:text-slate-200"}`}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${stockFilter === "bajo" ? "bg-amber-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.4)]" : "text-slate-400 hover:text-slate-200"}`}
                   >Stock Bajo</button>
-                  <button
-                    onClick={() => setStockFilter("ok")}
-                    className={`px-3 py-1.5 rounded-lg font-medium transition-all ${stockFilter === "ok" ? "bg-emerald-600 text-white shadow-[0_0_10px_rgba(5,150,105,0.4)]" : "text-slate-400 hover:text-slate-200"}`}
-                  >En Regla</button>
                 </div>
               </div>
 
-              <div className="text-xs text-slate-400 font-medium whitespace-nowrap">
-                Mostrando <span className="text-cyan-300 font-bold">{filteredItems.length}</span> de <span className="text-white font-bold">{items.length}</span> registros
+              <div className="text-[11px] sm:text-xs text-slate-400 font-medium whitespace-nowrap">
+                Mostrando <span className="text-cyan-300 font-bold">{filteredItems.length}</span> de <span className="text-white font-bold">{items.length}</span>
               </div>
             </section>
 
+            {/* Content Display: Desktop Table + Mobile Glass Cards */}
             <section className="glass-panel rounded-2xl overflow-hidden shadow-2xl flex-1 flex flex-col border border-cyan-500/20">
-              <div className="overflow-x-auto flex-1">
+              
+              {/* DESKTOP VIEW: Full Data Table */}
+              <div className="hidden md:block overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-white/10 bg-[#080d1a]/70 text-xs font-semibold text-slate-300 uppercase tracking-wider backdrop-blur-md">
@@ -868,7 +925,6 @@ export default function Dashboard() {
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 rounded-2xl bg-slate-800/50 border border-slate-700 flex items-center justify-center text-slate-400 text-xl shadow-inner">🏷️</div>
                             <p className="text-base font-semibold text-slate-200">No se encontraron artículos</p>
-                            <p className="text-xs text-slate-500 max-w-sm">No hay registros que coincidan con los filtros actuales.</p>
                             <button
                               onClick={handleOpenNewItemModal}
                               className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-[0_0_15px_rgba(37,99,235,0.3)] cursor-pointer"
@@ -949,16 +1005,108 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
+
+              {/* MOBILE & SMARTPHONE VIEW: Touch-Optimized Glass Cards (iPhone & Android) */}
+              <div className="block md:hidden p-3 divide-y divide-slate-800/60 space-y-3">
+                {loading ? (
+                  <div className="py-12 text-center text-slate-400 flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-xs">Cargando...</p>
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-xs">
+                    No se encontraron registros
+                  </div>
+                ) : (
+                  filteredItems.map((item) => {
+                    const isLow = item.cantidad <= 3;
+                    const subtotal = item.cantidad * (item.precio_unitario || 0);
+
+                    return (
+                      <div key={item.id} className="pt-3 first:pt-0 flex flex-col gap-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-mono text-[11px] text-slate-400 font-bold bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
+                                {item.codigo || "S/C"}
+                              </span>
+                              {item.numero_bien_nacional && (
+                                <span className="px-2 py-0.5 text-[11px] rounded-md bg-purple-950/80 text-purple-300 border border-purple-600/40 font-mono font-bold">
+                                  {item.numero_bien_nacional}
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-slate-100 text-sm">{item.nombre}</h4>
+                            {item.descripcion && (
+                              <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{item.descripcion}</p>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => handleOpenEditItemModal(item)}
+                              className="p-2 rounded-lg bg-slate-800 text-blue-300 border border-slate-700"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteItem(item.id, item.nombre)}
+                              className="p-2 rounded-lg bg-slate-800 text-rose-300 border border-slate-700"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 text-xs pt-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-cyan-400">{item.tipo_articulo || "Activo Fijo"}</span>
+                            <span className="text-slate-600">•</span>
+                            <span className="text-[10px] text-slate-300">{item.categoria || "General"}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-slate-300">${item.precio_unitario ? item.precio_unitario.toFixed(2) : "0.00"}</span>
+                            <div className="inline-flex items-center gap-1 bg-[#080d1a] border border-slate-700/80 rounded-lg p-0.5">
+                              <button
+                                onClick={() => handleAdjustStock(item.id, -1)}
+                                disabled={item.cantidad <= 0}
+                                className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white"
+                              >-</button>
+                              <span className={`px-1.5 text-xs font-bold ${isLow ? "text-amber-400" : "text-emerald-400"}`}>
+                                {item.cantidad}
+                              </span>
+                              <button
+                                onClick={() => handleAdjustStock(item.id, 1)}
+                                className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white"
+                              >+</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {item.ubicacion && (
+                          <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <span className="text-cyan-400">📍</span>
+                            <span>{item.ubicacion}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </section>
           </div>
         )}
 
+        {/* ========================================================================= */}
         {/* TAB 2: CATEGORÍAS */}
+        {/* ========================================================================= */}
         {activeTab === "categories" && (
           <div className="flex flex-col gap-5">
-            <div className="glass-panel rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 border border-cyan-500/20 shadow-xl">
+            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border border-cyan-500/20 shadow-xl">
               <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></span>
                   Módulo de Gestión de Categorías
                 </h2>
@@ -967,24 +1115,24 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <button
                   onClick={() => setActiveTab("inventory")}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                   title="Regresar al Inventario General"
                 >
-                  <span>← Volver al Inventario</span>
+                  <span>← Volver</span>
                 </button>
                 <input
                   type="text"
                   placeholder="Buscar categoría..."
                   value={searchCategory}
                   onChange={(e) => setSearchCategory(e.target.value)}
-                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 min-w-[180px]"
+                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 min-w-[150px]"
                 />
                 <button
                   onClick={handleOpenNewCategoryModal}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-white/20 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-white/20 transition-all cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   <span>+ Nueva Categoría</span>
@@ -992,7 +1140,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCategories.map((cat) => {
                 const colorHex = cat.color || "#3b82f6";
                 return (
@@ -1042,12 +1190,14 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ========================================================================= */}
         {/* TAB 3: TIPOS DE ARTÍCULOS */}
+        {/* ========================================================================= */}
         {activeTab === "types" && (
           <div className="flex flex-col gap-5">
-            <div className="glass-panel rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 border border-purple-500/20 shadow-xl">
+            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border border-purple-500/20 shadow-xl">
               <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"></span>
                   Clasificación y Tipos de Artículos
                 </h2>
@@ -1056,24 +1206,24 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <button
                   onClick={() => setActiveTab("inventory")}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                   title="Regresar al Inventario General"
                 >
-                  <span>← Volver al Inventario</span>
+                  <span>← Volver</span>
                 </button>
                 <input
                   type="text"
                   placeholder="Buscar tipo o prefijo..."
                   value={searchType}
                   onChange={(e) => setSearchType(e.target.value)}
-                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-400 min-w-[180px]"
+                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-400 min-w-[150px]"
                 />
                 <button
                   onClick={handleOpenNewTypeModal}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(147,51,234,0.4)] border border-white/20 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(147,51,234,0.4)] border border-white/20 transition-all cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   <span>+ Nuevo Tipo</span>
@@ -1081,7 +1231,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTypes.map((tp) => (
                 <div
                   key={tp.id}
@@ -1131,9 +1281,11 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ========================================================================= */}
         {/* TAB 4: CARGA MASIVA IA */}
+        {/* ========================================================================= */}
         {activeTab === "bulk" && (
-          <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto flex flex-col gap-6 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+          <div className="glass-panel rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto flex flex-col gap-6 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] border border-cyan-500/20">
@@ -1146,10 +1298,10 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() => setActiveTab("inventory")}
-                className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ml-auto"
+                className="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ml-auto"
                 title="Regresar al Inventario General"
               >
-                <span>← Volver al Inventario</span>
+                <span>← Volver</span>
               </button>
             </div>
 
@@ -1206,7 +1358,96 @@ export default function Dashboard() {
         )}
       </main>
 
+      {/* ========================================================================= */}
+      {/* MOBILE FLOATING BOTTOM NAVIGATION BAR (iOS & Android) */}
+      {/* ========================================================================= */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#060913]/90 backdrop-blur-2xl border-t border-white/10 px-2 py-2 flex items-center justify-around shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
+        <button
+          onClick={() => setActiveTab("inventory")}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "inventory" ? "text-cyan-400 font-bold scale-105" : "text-slate-400"
+          }`}
+        >
+          <span className="text-lg">📦</span>
+          <span className="text-[10px]">Inventario</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("categories")}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "categories" ? "text-cyan-400 font-bold scale-105" : "text-slate-400"
+          }`}
+        >
+          <span className="text-lg">🏷️</span>
+          <span className="text-[10px]">Categorías</span>
+        </button>
+
+        <button
+          onClick={handleOpenNewItemModal}
+          className="w-11 h-11 -mt-5 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white text-xl shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-white/30 active:scale-95 transition-transform cursor-pointer"
+          title="Agregar Ítem"
+        >
+          +
+        </button>
+
+        <button
+          onClick={() => setActiveTab("types")}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "types" ? "text-purple-400 font-bold scale-105" : "text-slate-400"
+          }`}
+        >
+          <span className="text-lg">⚙️</span>
+          <span className="text-[10px]">Tipos</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("bulk")}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "bulk" ? "text-emerald-400 font-bold scale-105" : "text-slate-400"
+          }`}
+        >
+          <span className="text-lg">📑</span>
+          <span className="text-[10px]">Carga IA</span>
+        </button>
+      </nav>
+
+      {/* ========================================================================= */}
+      {/* MODAL: INSTRUCCIONES DE INSTALACIÓN IPHONE (iOS Safari) */}
+      {/* ========================================================================= */}
+      {isIosModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="glass-panel rounded-3xl w-full max-w-sm p-6 relative flex flex-col gap-4 border border-cyan-500/30 text-center shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl mx-auto border border-cyan-500/30">
+              🍎
+            </div>
+            <h3 className="text-lg font-bold text-white">Instalar en iPhone / iPad</h3>
+            <div className="text-xs text-slate-300 space-y-3 text-left bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+              <p className="flex items-start gap-2">
+                <span className="font-bold text-cyan-400">1.</span>
+                <span>Toca el botón <strong>Compartir</strong> (icono <span className="text-base">⎋</span>) en la barra inferior de Safari.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="font-bold text-cyan-400">2.</span>
+                <span>Desplázate hacia abajo y pulsa <strong>"Añadir a pantalla de inicio"</strong> (<span className="text-base">➕</span>).</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="font-bold text-cyan-400">3.</span>
+                <span>Pulsa <strong>"Añadir"</strong> en la esquina superior derecha.</span>
+              </p>
+            </div>
+            <button
+              onClick={() => setIsIosModalOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL: REGISTRAR / MODIFICAR ÍTEM */}
+      {/* ========================================================================= */}
       {isItemModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in overflow-y-auto">
           <div className="glass-panel rounded-3xl w-full max-w-xl p-6 relative flex flex-col gap-4 my-8 border border-cyan-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(56,189,248,0.15)]">
@@ -1382,7 +1623,9 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ========================================================================= */}
       {/* MODAL: CREAR / MODIFICAR CATEGORÍA */}
+      {/* ========================================================================= */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
           <div className="glass-panel rounded-3xl w-full max-w-md p-6 relative flex flex-col gap-4 border border-cyan-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(56,189,248,0.15)]">
@@ -1470,7 +1713,9 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ========================================================================= */}
       {/* MODAL: CREAR / MODIFICAR TIPO DE ARTÍCULO */}
+      {/* ========================================================================= */}
       {isTypeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
           <div className="glass-panel rounded-3xl w-full max-w-md p-6 relative flex flex-col gap-4 border border-purple-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(147,51,234,0.15)]">
@@ -1548,7 +1793,9 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ========================================================================= */}
       {/* MODAL: CARGA MASIVA IA */}
+      {/* ========================================================================= */}
       {isBulkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
           <div className="glass-panel rounded-3xl w-full max-w-lg shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_25px_rgba(56,189,248,0.15)] p-6 relative flex flex-col gap-4 border border-cyan-500/30">
