@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import VenezuelaMap, { StateStats } from "../components/VenezuelaMap";
 import { VENEZUELA_STATES_PATHS } from "../components/venezuelaData";
+import { DEFAULT_ITEMS, DEFAULT_CATEGORIES, DEFAULT_TYPES, DEFAULT_SEDES } from "../components/seedData";
 
 interface Item {
   id: number;
@@ -225,41 +226,94 @@ export default function Dashboard() {
     }
   };
 
-  // Fetch All Core Data
+  // Fetch All Core Data (Con soporte para Servidor Local, Cloudflare Tunnel y GitHub Pages 24/7)
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resItems, resCats, resTypes, resStats, resSedes] = await Promise.all([
-        fetch(`${API_URL}/items`),
-        fetch(`${API_URL}/categories`),
-        fetch(`${API_URL}/types`),
-        fetch(`${API_URL}/stats`),
-        fetch(`${API_URL}/sedes`),
-      ]);
+      let loadedItems: Item[] = [];
+      let loadedCats: Category[] = [];
+      let loadedTypes: ArticleType[] = [];
+      let loadedSedes: Sede[] = [];
 
-      if (resItems.ok) {
-        const dataItems = await resItems.json();
-        setItems(dataItems);
+      try {
+        const [resItems, resCats, resTypes, resStats, resSedes] = await Promise.all([
+          fetch(`${API_URL}/items`).catch(() => null),
+          fetch(`${API_URL}/categories`).catch(() => null),
+          fetch(`${API_URL}/types`).catch(() => null),
+          fetch(`${API_URL}/stats`).catch(() => null),
+          fetch(`${API_URL}/sedes`).catch(() => null),
+        ]);
+
+        if (resItems && resItems.ok) loadedItems = await resItems.json();
+        if (resCats && resCats.ok) loadedCats = await resCats.json();
+        if (resTypes && resTypes.ok) loadedTypes = await resTypes.json();
+        if (resSedes && resSedes.ok) loadedSedes = await resSedes.json();
+        if (resStats && resStats.ok) {
+          const dataStats = await resStats.json();
+          setStats(dataStats);
+        }
+      } catch (e) {
+        console.warn("Backend local no accesible, activando datos institucionales:", e);
       }
-      if (resCats.ok) {
-        const dataCats = await resCats.json();
-        setCategories(dataCats);
-      }
-      if (resTypes.ok) {
-        const dataTypes = await resTypes.json();
-        setTypes(dataTypes);
-      }
-      if (resStats.ok) {
-        const dataStats = await resStats.json();
-        setStats(dataStats);
-      }
-      if (resSedes.ok) {
-        const dataSedes = await resSedes.json();
-        setSedes(dataSedes);
-      }
+
+      // Modo Contingencia y GitHub Pages: si el backend no responde, cargar datos institucionales por defecto
+      if (loadedItems.length === 0) loadedItems = DEFAULT_ITEMS;
+      if (loadedCats.length === 0) loadedCats = DEFAULT_CATEGORIES;
+      if (loadedTypes.length === 0) loadedTypes = DEFAULT_TYPES;
+      if (loadedSedes.length === 0) loadedSedes = DEFAULT_SEDES;
+
+      setItems(loadedItems);
+      setCategories(loadedCats);
+      setTypes(loadedTypes);
+      setSedes(loadedSedes);
+
+      // Calcular stats si la API estática no las proveyó
+      setStats((prev) => {
+        if (prev.total_items > 0 && prev.states_data && Object.keys(prev.states_data).length > 0) {
+          return prev;
+        }
+        const totalStock = loadedItems.reduce((acc, it) => acc + it.cantidad, 0);
+        const totalVal = loadedItems.reduce((acc, it) => acc + it.cantidad * (it.precio_unitario || 0), 0);
+        const low = loadedItems.filter((it) => it.cantidad <= 3).length;
+        const bn = loadedItems.filter((it) => it.numero_bien_nacional).length;
+
+        const stData: Record<string, StateStats> = {};
+        for (const it of loadedItems) {
+          const st = it.estado || "Distrito Capital";
+          if (!stData[st]) {
+            stData[st] = { estado: st, items_count: 0, total_stock: 0, total_value: 0, sedes_count: 0, sedes: [] };
+          }
+          stData[st].items_count += 1;
+          stData[st].total_stock += it.cantidad;
+          stData[st].total_value += it.cantidad * (it.precio_unitario || 0);
+        }
+
+        for (const sd of loadedSedes) {
+          const st = sd.estado || "Distrito Capital";
+          if (!stData[st]) {
+            stData[st] = { estado: st, items_count: 0, total_stock: 0, total_value: 0, sedes_count: 0, sedes: [] };
+          }
+          stData[st].sedes_count += 1;
+          if (stData[st].sedes && !stData[st].sedes?.includes(sd.nombre)) {
+            stData[st].sedes?.push(sd.nombre);
+          }
+        }
+
+        return {
+          total_items: loadedItems.length,
+          total_stock: totalStock,
+          total_value: Math.round(totalVal),
+          low_stock: low,
+          categories_count: loadedCats.length,
+          categories: loadedCats.map((c) => c.nombre),
+          tipos: loadedTypes.map((t) => t.nombre),
+          bien_nacional_count: bn,
+          total_sedes: loadedSedes.length,
+          states_data: stData,
+        };
+      });
     } catch (err) {
-      console.error("Error al conectar con la API:", err);
-      showToast("Error de conexión con el servidor", "error");
+      console.error("Error al procesar datos:", err);
     } finally {
       setLoading(false);
     }
