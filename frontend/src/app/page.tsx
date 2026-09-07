@@ -581,13 +581,23 @@ export default function Dashboard() {
 
       {/* Top Header with Glass Bevel */}
       <header className="glass-panel sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 rounded-b-2xl mx-2 mt-1 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.1)]">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/30 font-black text-xl text-white">
+        <button
+          onClick={() => {
+            setActiveTab("inventory");
+            setIsItemModalOpen(false);
+            setIsCategoryModalOpen(false);
+            setIsTypeModalOpen(false);
+            setIsBulkModalOpen(false);
+          }}
+          title="Ir a la pantalla principal (Inventario General)"
+          className="flex items-center gap-4 group cursor-pointer text-left focus:outline-none"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] border border-white/30 font-black text-xl text-white group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] transition-all">
             OD
           </div>
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-black tracking-tight text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">
+              <h1 className="text-xl font-black tracking-tight text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)] group-hover:text-cyan-300 transition-colors">
                 ODINVENTARIO
               </h1>
               <span className="px-2.5 py-0.5 text-[11px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.2)]">
@@ -599,7 +609,7 @@ export default function Dashboard() {
               Servidor Activo • 192.168.100.2:8088
             </p>
           </div>
-        </div>
+        </button>
 
         {/* Global Quick Action Buttons */}
         <div className="flex items-center gap-2.5">
@@ -958,12 +968,19 @@ export default function Dashboard() {
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveTab("inventory")}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  title="Regresar al Inventario General"
+                >
+                  <span>← Volver al Inventario</span>
+                </button>
                 <input
                   type="text"
                   placeholder="Buscar categoría..."
                   value={searchCategory}
                   onChange={(e) => setSearchCategory(e.target.value)}
-                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 min-w-[200px]"
+                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 min-w-[180px]"
                 />
                 <button
                   onClick={handleOpenNewCategoryModal}
@@ -1040,12 +1057,19 @@ export default function Dashboard() {
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveTab("inventory")}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  title="Regresar al Inventario General"
+                >
+                  <span>← Volver al Inventario</span>
+                </button>
                 <input
                   type="text"
                   placeholder="Buscar tipo o prefijo..."
                   value={searchType}
                   onChange={(e) => setSearchType(e.target.value)}
-                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-400 min-w-[200px]"
+                  className="px-3 py-2 bg-[#080d1a]/80 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-400 min-w-[180px]"
                 />
                 <button
                   onClick={handleOpenNewTypeModal}
@@ -1110,14 +1134,23 @@ export default function Dashboard() {
         {/* TAB 4: CARGA MASIVA IA */}
         {activeTab === "bulk" && (
           <div className="glass-panel rounded-3xl p-8 max-w-2xl mx-auto flex flex-col gap-6 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] border border-cyan-500/20">
-                📑
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] border border-cyan-500/20">
+                  📑
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white tracking-tight">Carga Masiva con Inteligencia Artificial</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Sube listas de inventario existentes en Excel (.xlsx), Word (.docx) o PDF.</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-black text-white tracking-tight">Carga Masiva con Inteligencia Artificial</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Sube listas de inventario existentes en Excel (.xlsx), Word (.docx) o PDF.</p>
-              </div>
+              <button
+                onClick={() => setActiveTab("inventory")}
+                className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ml-auto"
+                title="Regresar al Inventario General"
+              >
+                <span>← Volver al Inventario</span>
+              </button>
             </div>
 
             <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 text-xs text-slate-300 space-y-2 leading-relaxed">
