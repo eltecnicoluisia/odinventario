@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  reverse-proxy:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - odin_net
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-uzcategui}
+      POSTGRES_PASSWORD: ${DB_PASS:-uzcategui}
+      POSTGRES_DB: odinventario
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - odin_net
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    networks:
+      - odin_net
+
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-uzcategui}:${DB_PASS:-uzcategui}@db:5432/odinventario
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-tu_api_key_aqui}
+    depends_on:
+      - db
+      - redis
+    labels:
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    networks:
+      - odin_net
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost/api
+    depends_on:
+      - backend
+    labels:
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    networks:
+      - odin_net
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  pgdata:
+
+networks:
+  odin_net:
+    driver: bridge
