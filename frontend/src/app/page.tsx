@@ -90,7 +90,10 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const API_URL = "/api";
 
   // Fetch Data
   const fetchData = async () => {
@@ -192,11 +195,14 @@ export default function Dashboard() {
   // Submit Save/Update
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     if (!formData.nombre.trim()) {
+      setFormError("El nombre del artículo es obligatorio.");
       showToast("El nombre del artículo es obligatorio", "error");
       return;
     }
 
+    setIsSaving(true);
     const payload = {
       ...formData,
       categoria: customCategory.trim() ? customCategory.trim() : formData.categoria,
@@ -214,8 +220,9 @@ export default function Dashboard() {
         if (res.ok) {
           showToast(`Ítem '${payload.nombre}' actualizado correctamente`);
           setIsItemModalOpen(false);
-          fetchData();
+          await fetchData();
         } else {
+          setFormError("Error al actualizar el ítem en el servidor.");
           showToast("Error al actualizar ítem", "error");
         }
       } else {
@@ -226,15 +233,19 @@ export default function Dashboard() {
           body: JSON.stringify(payload),
         });
         if (res.ok) {
-          showToast(`Ítem '${payload.nombre}' registrado con éxito`);
+          showToast(`Ítem '${payload.nombre}' cargado con éxito`);
           setIsItemModalOpen(false);
-          fetchData();
+          await fetchData();
         } else {
+          setFormError("Error al guardar el ítem en el servidor.");
           showToast("Error al guardar ítem", "error");
         }
       }
     } catch (err) {
+      setFormError("Error de conexión al servidor.");
       showToast("Error de conexión al guardar", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -379,7 +390,7 @@ export default function Dashboard() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>+ Agregar Ítem</span>
+            <span>+ Cargar / Agregar Ítem</span>
           </button>
         </div>
       </header>
@@ -914,6 +925,11 @@ export default function Dashboard() {
                 />
               </div>
 
+              {formError && (
+                <div className="p-3 bg-rose-950/80 border border-rose-600/80 rounded-xl text-xs text-rose-300 font-medium">
+                  ⚠ {formError}
+                </div>
+              )}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
                 <button
                   type="button"
@@ -924,9 +940,17 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-xs shadow-[0_0_15px_rgba(59,130,246,0.4)] border border-white/20 transition-all"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 disabled:opacity-50 text-white font-bold text-xs shadow-[0_0_18px_rgba(59,130,246,0.4)] border border-white/20 transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  {editingItem ? "Guardar Modificaciones" : "Registrar Artículo"}
+                  {isSaving ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Cargando al sistema...</span>
+                    </>
+                  ) : (
+                    <span>{editingItem ? "✓ Guardar Modificaciones" : "✓ Cargar Ítem al Inventario"}</span>
+                  )}
                 </button>
               </div>
             </form>

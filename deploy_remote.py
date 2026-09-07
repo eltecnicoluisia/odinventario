@@ -47,7 +47,7 @@ def deploy():
         f"mkdir -p {REMOTE_DIR}",
         f"tar -xzvf {REMOTE_ARCHIVE} -C {REMOTE_DIR}",
         f"cd {REMOTE_DIR} && echo {PASSWORD} | sudo -S docker compose down --remove-orphans || true",
-        f"cd {REMOTE_DIR} && echo {PASSWORD} | sudo -S docker compose up -d --remove-orphans",
+        f"cd {REMOTE_DIR} && echo {PASSWORD} | sudo -S docker compose up -d --build --remove-orphans",
         f"cd {REMOTE_DIR} && echo {PASSWORD} | sudo -S docker compose ps"
     ]
 

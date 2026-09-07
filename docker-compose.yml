@@ -51,15 +51,11 @@ services:
     build: ./frontend
     restart: always
     environment:
-      - NEXT_PUBLIC_API_URL=http://192.168.100.2:8088/api
+      - NODE_ENV=production
     depends_on:
       - backend
     networks:
       - odin_net
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
 
 volumes:
   pgdata:
