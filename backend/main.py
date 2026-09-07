@@ -81,10 +81,15 @@ def seed_defaults():
             db.bulk_save_objects(default_sedes)
             db.commit()
 
-        # Update items with first sede if null
-        first_sede = db.query(models.Sede).first()
-        if first_sede:
-            db.query(models.Item).filter(models.Item.sede.is_(None)).update({"sede": first_sede.nombre, "estado": first_sede.estado})
+        # Distribute items across sedes if null or unassigned
+        all_items = db.query(models.Item).all()
+        all_sedes = db.query(models.Sede).all()
+        if all_sedes and all_items:
+            for idx, item in enumerate(all_items):
+                if not item.sede or not item.estado or item.sede == "Sede Central":
+                    assigned_sede = all_sedes[idx % len(all_sedes)]
+                    item.sede = assigned_sede.nombre
+                    item.estado = assigned_sede.estado
             db.commit()
 
     except Exception as e:

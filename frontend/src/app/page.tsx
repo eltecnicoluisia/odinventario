@@ -253,6 +253,10 @@ export default function Dashboard() {
         const dataStats = await resStats.json();
         setStats(dataStats);
       }
+      if (resSedes.ok) {
+        const dataSedes = await resSedes.json();
+        setSedes(dataSedes);
+      }
     } catch (err) {
       console.error("Error al conectar con la API:", err);
       showToast("Error de conexión con el servidor", "error");
@@ -1144,7 +1148,7 @@ export default function Dashboard() {
                   <tbody className="divide-y divide-slate-800/40">
                     {loading ? (
                       <tr>
-                        <td colSpan={9} className="py-16 text-center text-slate-400">
+                        <td colSpan={10} className="py-16 text-center text-slate-400">
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
                             <p className="text-sm">Cargando catálogo institucional...</p>
@@ -1153,7 +1157,7 @@ export default function Dashboard() {
                       </tr>
                     ) : filteredItems.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-16 text-center text-slate-400">
+                        <td colSpan={10} className="py-16 text-center text-slate-400">
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 rounded-2xl bg-slate-800/50 border border-slate-700 flex items-center justify-center text-slate-400 text-xl shadow-inner">🏷️</div>
                             <p className="text-base font-semibold text-slate-200">No se encontraron artículos</p>
@@ -1184,6 +1188,20 @@ export default function Dashboard() {
                             <td className="py-3.5 px-4 max-w-xs">
                               <div className="font-semibold text-slate-100 group-hover:text-cyan-300 transition-colors">{item.nombre}</div>
                               {item.descripcion && <div className="text-xs text-slate-400 truncate max-w-xs mt-0.5">{item.descripcion}</div>}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-cyan-950/70 border border-cyan-500/40 text-cyan-200">
+                                📍 {item.estado || "Distrito Capital"}
+                              </span>
+                              {item.sede ? (
+                                <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[150px]">
+                                  🏢 {item.sede}
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-slate-500 mt-0.5 italic">
+                                  🏢 Sede Central
+                                </p>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 whitespace-nowrap">
                               <div className="flex flex-col gap-1">
