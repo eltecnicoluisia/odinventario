@@ -104,6 +104,8 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [selectedTipo, setSelectedTipo] = useState("Todos");
+  const [selectedStateFilter, setSelectedStateFilter] = useState("Todos");
+  const [selectedSedeFilter, setSelectedSedeFilter] = useState("Todas");
   const [stockFilter, setStockFilter] = useState<"todos" | "bajo" | "ok">("todos");
 
   // Filters for Categories & Types views
@@ -274,13 +276,23 @@ export default function Dashboard() {
         (item.tipo_articulo && item.tipo_articulo.toLowerCase().includes(search)) ||
         (item.categoria && item.categoria.toLowerCase().includes(search)) ||
         (item.descripcion && item.descripcion.toLowerCase().includes(search)) ||
-        (item.ubicacion && item.ubicacion.toLowerCase().includes(search));
+        (item.ubicacion && item.ubicacion.toLowerCase().includes(search)) ||
+        (item.estado && item.estado.toLowerCase().includes(search)) ||
+        (item.sede && item.sede.toLowerCase().includes(search));
 
       const matchesCat =
         selectedCategory === "Todas" || item.categoria === selectedCategory;
 
       const matchesTipo =
         selectedTipo === "Todos" || item.tipo_articulo === selectedTipo;
+
+      const matchesEstado =
+        selectedStateFilter === "Todos" ||
+        (item.estado && item.estado.toLowerCase() === selectedStateFilter.toLowerCase());
+
+      const matchesSede =
+        selectedSedeFilter === "Todas" ||
+        (item.sede && item.sede.toLowerCase() === selectedSedeFilter.toLowerCase());
 
       const matchesStock =
         stockFilter === "todos"
@@ -289,9 +301,9 @@ export default function Dashboard() {
           ? item.cantidad <= 3
           : item.cantidad > 3;
 
-      return matchesSearch && matchesCat && matchesTipo && matchesStock;
+      return matchesSearch && matchesCat && matchesTipo && matchesEstado && matchesSede && matchesStock;
     });
-  }, [items, searchTerm, selectedCategory, selectedTipo, stockFilter]);
+  }, [items, searchTerm, selectedCategory, selectedTipo, selectedStateFilter, selectedSedeFilter, stockFilter]);
 
   // Filtered Categories
   const filteredCategories = useMemo(() => {
@@ -1029,6 +1041,52 @@ export default function Dashboard() {
                   ))}
                 </select>
 
+                {/* Filtro por Estado de Venezuela */}
+                <select
+                  value={selectedStateFilter}
+                  onChange={(e) => {
+                    setSelectedStateFilter(e.target.value);
+                    setSelectedSedeFilter("Todas");
+                  }}
+                  className={`py-2 px-3 border rounded-xl text-xs font-medium focus:outline-none transition-all cursor-pointer ${
+                    selectedStateFilter !== "Todos"
+                      ? "bg-cyan-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                      : "bg-[#080d1a]/80 border-slate-700/60 text-slate-200 hover:border-cyan-500/50"
+                  }`}
+                >
+                  <option value="Todos">📍 Estado: Todos (Venezuela)</option>
+                  {VENEZUELA_STATES_PATHS.map((st) => {
+                    const count = items.filter(
+                      (it) => (it.estado || "").toLowerCase() === st.title.toLowerCase()
+                    ).length;
+                    return (
+                      <option key={st.id} value={st.title}>
+                        {st.title} {count > 0 ? `(${count})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {/* Filtro por Sede / Galpón */}
+                <select
+                  value={selectedSedeFilter}
+                  onChange={(e) => setSelectedSedeFilter(e.target.value)}
+                  className={`py-2 px-3 border rounded-xl text-xs font-medium focus:outline-none transition-all cursor-pointer ${
+                    selectedSedeFilter !== "Todas"
+                      ? "bg-blue-950/80 border-blue-400 text-blue-200 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+                      : "bg-[#080d1a]/80 border-slate-700/60 text-slate-200 hover:border-blue-500/50"
+                  }`}
+                >
+                  <option value="Todas">🏢 Galpón / Sede: Todas</option>
+                  {sedes
+                    .filter((s) => selectedStateFilter === "Todos" || s.estado.toLowerCase() === selectedStateFilter.toLowerCase())
+                    .map((s) => (
+                      <option key={s.id} value={s.nombre}>
+                        {s.nombre} ({s.estado})
+                      </option>
+                    ))}
+                </select>
+
                 <div className="flex items-center bg-[#080d1a]/80 border border-slate-700/60 rounded-xl p-0.5 text-xs">
                   <button
                     onClick={() => setStockFilter("todos")}
@@ -1041,8 +1099,25 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="text-[11px] sm:text-xs text-slate-400 font-medium whitespace-nowrap">
-                Mostrando <span className="text-cyan-300 font-bold">{filteredItems.length}</span> de <span className="text-white font-bold">{items.length}</span>
+              <div className="flex items-center gap-3">
+                {(selectedStateFilter !== "Todos" || selectedSedeFilter !== "Todas" || selectedCategory !== "Todas" || selectedTipo !== "Todos" || searchTerm || stockFilter !== "todos") && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("Todas");
+                      setSelectedTipo("Todos");
+                      setSelectedStateFilter("Todos");
+                      setSelectedSedeFilter("Todas");
+                      setStockFilter("todos");
+                    }}
+                    className="px-2.5 py-1 rounded-lg border border-rose-500/40 bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    ✕ Limpiar Filtros
+                  </button>
+                )}
+                <div className="text-[11px] sm:text-xs text-slate-400 font-medium whitespace-nowrap">
+                  Mostrando <span className="text-cyan-300 font-bold">{filteredItems.length}</span> de <span className="text-white font-bold">{items.length}</span>
+                </div>
               </div>
             </section>
 
@@ -1057,6 +1132,7 @@ export default function Dashboard() {
                       <th className="py-4 px-4">Código / SKU</th>
                       <th className="py-4 px-4">Bien Nacional (BN)</th>
                       <th className="py-4 px-4">Artículo / Descripción</th>
+                      <th className="py-4 px-4">Estado & Galpón</th>
                       <th className="py-4 px-4">Tipo & Categoría</th>
                       <th className="py-4 px-4 text-center">Stock</th>
                       <th className="py-4 px-4 text-right">Precio Unitario</th>
