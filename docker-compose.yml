@@ -58,8 +58,6 @@ services:
       - NEXT_PUBLIC_API_URL=http://192.168.100.2:8088/api
     depends_on:
       - backend
-    ports:
-      - "3000:3000"
     labels:
       - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
