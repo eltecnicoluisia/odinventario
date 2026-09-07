@@ -36,6 +36,47 @@ def sync_github():
     except Exception as e:
         print(f"[-] Error sincronizando con GitHub: {e}")
 
+def sync_github_pages():
+    print("[*] Sincronizando página web en GitHub Pages (origin/gh-pages)...")
+    try:
+        frontend_dir = os.path.join(LOCAL_DIR, "frontend")
+        out_dir = os.path.join(frontend_dir, "out")
+        env = os.environ.copy()
+        env["GITHUB_PAGES"] = "true"
+        
+        # Build static export
+        res_build = subprocess.run(["npx", "next", "build"], cwd=frontend_dir, env=env, shell=True, capture_output=True, text=True)
+        if res_build.returncode != 0:
+            print(f"[!] Advertencia en build estático: {res_build.stderr.strip()[:200]}")
+            return
+
+        # Add .nojekyll and 404.html
+        with open(os.path.join(out_dir, ".nojekyll"), "w") as f:
+            pass
+        if os.path.exists(os.path.join(out_dir, "index.html")):
+            import shutil
+            shutil.copyfile(os.path.join(out_dir, "index.html"), os.path.join(out_dir, "404.html"))
+
+        # Push to gh-pages branch
+        subprocess.run(["git", "init"], cwd=out_dir, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["git", "checkout", "-B", "gh-pages"], cwd=out_dir, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["git", "add", "-A"], cwd=out_dir, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["git", "commit", "-m", f"deploy: GitHub Pages {time.strftime('%Y-%m-%d %H:%M:%S')}"], cwd=out_dir, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["git", "remote", "remove", "origin"], cwd=out_dir, stderr=subprocess.DEVNULL)
+        subprocess.run(["git", "remote", "add", "origin", "https://github.com/eltecnicoluisia/odinventario.git"], cwd=out_dir, check=True)
+        push_gh = subprocess.run(["git", "push", "-u", "origin", "gh-pages", "--force"], cwd=out_dir, capture_output=True, text=True)
+        
+        # Clean temporary .git in out
+        import shutil
+        shutil.rmtree(os.path.join(out_dir, ".git"), ignore_errors=True)
+        
+        if push_gh.returncode == 0:
+            print("[+] GitHub Pages actualizado exitosamente en https://eltecnicoluisia.github.io/odinventario/")
+        else:
+            print(f"[!] Error subiendo a gh-pages: {push_gh.stderr.strip()[:200]}")
+    except Exception as e:
+        print(f"[-] Error sincronizando GitHub Pages: {e}")
+
 def make_tar():
     print("[*] Empaquetando proyecto local...")
     with tarfile.open(LOCAL_ARCHIVE, "w:gz") as tar:
@@ -63,10 +104,13 @@ def verify_live():
     return False
 
 def deploy():
-    # 1. Sync with GitHub
+    # 1. Sync with GitHub (master branch)
     sync_github()
 
-    # 2. Package
+    # 2. Sync with GitHub Pages (gh-pages branch)
+    sync_github_pages()
+
+    # 3. Package
     make_tar()
 
     # 3. Connect SSH
