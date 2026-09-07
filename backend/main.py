@@ -23,6 +23,46 @@ try:
 except Exception as e:
     print(f"Migration note: {e}")
 
+def seed_defaults():
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        # Seed Categories if empty
+        if db.query(models.Category).count() == 0:
+            default_categories = [
+                models.Category(nombre="Servidores", descripcion="Equipos de cómputo para centros de datos y virtualización", color="#3b82f6"),
+                models.Category(nombre="Redes", descripcion="Switches, routers, firewalls y equipos de conectividad", color="#06b6d4"),
+                models.Category(nombre="Conectividad", descripcion="Transceivers, cables ópticos y módulos de interconexión", color="#8b5cf6"),
+                models.Category(nombre="Energía", descripcion="UPS, PDUs, plantas eléctricas y baterías de respaldo", color="#10b981"),
+                models.Category(nombre="Cableado", descripcion="Bobinas UTP/STP, patch cords y accesorios de canalización", color="#f59e0b"),
+                models.Category(nombre="Componentes", descripcion="Discos NVMe, memorias RAM, fuentes de poder y repuestos", color="#ec4899"),
+                models.Category(nombre="Equipos de Impresion", descripcion="Impresoras láser, multifuncionales y escáneres", color="#6366f1"),
+                models.Category(nombre="Mobiliario y Oficinas", descripcion="Escritorios, sillas ergonómicas, estantes y archivos", color="#14b8a6"),
+            ]
+            db.bulk_save_objects(default_categories)
+            db.commit()
+
+        # Seed Article Types if empty
+        if db.query(models.ArticleType).count() == 0:
+            default_types = [
+                models.ArticleType(nombre="Activo Fijo", descripcion="Bienes tangibles de uso permanente sujetos a depreciación y control de Bien Nacional", prefijo="BN"),
+                models.ArticleType(nombre="Equipo Tecnológico", descripcion="Hardware de computación, servidores, laptops y periféricos", prefijo="EQ"),
+                models.ArticleType(nombre="Mobiliario", descripcion="Muebles y enseres de oficina", prefijo="MOB"),
+                models.ArticleType(nombre="Consumible", descripcion="Materiales gastables que no requieren asignación de bien nacional", prefijo="CON"),
+                models.ArticleType(nombre="Herramienta", descripcion="Instrumentos de trabajo, testers y herramientas técnicas", prefijo="HER"),
+                models.ArticleType(nombre="Redes y Telecom", descripcion="Infraestructura de telecomunicaciones y enlaces", prefijo="RED"),
+                models.ArticleType(nombre="Material de Oficina", descripcion="Artículos de papelería y suministros administrativos", prefijo="MAT"),
+            ]
+            db.bulk_save_objects(default_types)
+            db.commit()
+    except Exception as e:
+        print(f"Seed defaults note: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+seed_defaults()
+
 app = FastAPI(title="OdInventario API")
 
 app.add_middleware(
@@ -37,6 +77,7 @@ app.add_middleware(
 def health_check():
     return {"status": "ok", "message": "Odinventario Backend Running"}
 
+# ==================== STATS ENDPOINT ====================
 @app.get("/stats")
 def get_inventory_stats(db: Session = Depends(get_db)):
     items = db.query(models.Item).all()
@@ -46,8 +87,14 @@ def get_inventory_stats(db: Session = Depends(get_db)):
     low_stock = sum(1 for item in items if item.cantidad <= 3)
     
     # Categories & Types
-    categories_set = set(item.categoria for item in items if item.categoria)
-    types_set = set(item.tipo_articulo for item in items if item.tipo_articulo)
+    categories = [c.nombre for c in db.query(models.Category).order_by(models.Category.nombre).all()]
+    if not categories:
+        categories = sorted(list(set(item.categoria for item in items if item.categoria)))
+
+    tipos = [t.nombre for t in db.query(models.ArticleType).order_by(models.ArticleType.nombre).all()]
+    if not tipos:
+        tipos = sorted(list(set(item.tipo_articulo for item in items if item.tipo_articulo)))
+
     bien_nacional_count = sum(1 for item in items if item.numero_bien_nacional)
     
     return {
@@ -55,12 +102,142 @@ def get_inventory_stats(db: Session = Depends(get_db)):
         "total_stock": total_stock,
         "total_value": round(total_value, 2),
         "low_stock": low_stock,
-        "categories_count": len(categories_set),
-        "categories": sorted(list(categories_set)),
-        "tipos": sorted(list(types_set)),
+        "categories_count": len(categories),
+        "categories": categories,
+        "tipos": tipos,
         "bien_nacional_count": bien_nacional_count
     }
 
+# ==================== CATEGORIES CRUD ====================
+@app.get("/categories", response_model=List[schemas.CategoryResponse])
+def get_categories(db: Session = Depends(get_db)):
+    cats = db.query(models.Category).order_by(models.Category.nombre).all()
+    result = []
+    for cat in cats:
+        count = db.query(models.Item).filter(models.Item.categoria == cat.nombre).count()
+        c_dict = {
+            "id": cat.id,
+            "nombre": cat.nombre,
+            "descripcion": cat.descripcion,
+            "color": cat.color,
+            "items_count": count,
+            "fecha_creacion": cat.fecha_creacion
+        }
+        result.append(c_dict)
+    return result
+
+@app.post("/categories", response_model=schemas.CategoryResponse)
+def create_category(cat_in: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.Category).filter(models.Category.nombre.ilike(cat_in.nombre)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe una categoría con ese nombre")
+    
+    cat = models.Category(
+        nombre=cat_in.nombre.strip(),
+        descripcion=cat_in.descripcion,
+        color=cat_in.color or "#3b82f6"
+    )
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return {"id": cat.id, "nombre": cat.nombre, "descripcion": cat.descripcion, "color": cat.color, "items_count": 0, "fecha_creacion": cat.fecha_creacion}
+
+@app.put("/categories/{cat_id}", response_model=schemas.CategoryResponse)
+def update_category(cat_id: int, cat_in: schemas.CategoryUpdate, db: Session = Depends(get_db)):
+    cat = db.query(models.Category).filter(models.Category.id == cat_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+    
+    old_name = cat.nombre
+    if cat_in.nombre:
+        cat.nombre = cat_in.nombre.strip()
+        # Update items with this category
+        db.query(models.Item).filter(models.Item.categoria == old_name).update({"categoria": cat.nombre})
+
+    if cat_in.descripcion is not None:
+        cat.descripcion = cat_in.descripcion
+    if cat_in.color is not None:
+        cat.color = cat_in.color
+
+    db.commit()
+    db.refresh(cat)
+    count = db.query(models.Item).filter(models.Item.categoria == cat.nombre).count()
+    return {"id": cat.id, "nombre": cat.nombre, "descripcion": cat.descripcion, "color": cat.color, "items_count": count, "fecha_creacion": cat.fecha_creacion}
+
+@app.delete("/categories/{cat_id}")
+def delete_category(cat_id: int, db: Session = Depends(get_db)):
+    cat = db.query(models.Category).filter(models.Category.id == cat_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+    db.delete(cat)
+    db.commit()
+    return {"message": "Categoría eliminada", "id": cat_id}
+
+# ==================== ARTICLE TYPES CRUD ====================
+@app.get("/types", response_model=List[schemas.ArticleTypeResponse])
+def get_article_types(db: Session = Depends(get_db)):
+    types = db.query(models.ArticleType).order_by(models.ArticleType.nombre).all()
+    result = []
+    for t in types:
+        count = db.query(models.Item).filter(models.Item.tipo_articulo == t.nombre).count()
+        result.append({
+            "id": t.id,
+            "nombre": t.nombre,
+            "descripcion": t.descripcion,
+            "prefijo": t.prefijo,
+            "items_count": count,
+            "fecha_creacion": t.fecha_creacion
+        })
+    return result
+
+@app.post("/types", response_model=schemas.ArticleTypeResponse)
+def create_article_type(type_in: schemas.ArticleTypeCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.ArticleType).filter(models.ArticleType.nombre.ilike(type_in.nombre)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un tipo con ese nombre")
+    
+    tp = models.ArticleType(
+        nombre=type_in.nombre.strip(),
+        descripcion=type_in.descripcion,
+        prefijo=type_in.prefijo
+    )
+    db.add(tp)
+    db.commit()
+    db.refresh(tp)
+    return {"id": tp.id, "nombre": tp.nombre, "descripcion": tp.descripcion, "prefijo": tp.prefijo, "items_count": 0, "fecha_creacion": tp.fecha_creacion}
+
+@app.put("/types/{type_id}", response_model=schemas.ArticleTypeResponse)
+def update_article_type(type_id: int, type_in: schemas.ArticleTypeUpdate, db: Session = Depends(get_db)):
+    tp = db.query(models.ArticleType).filter(models.ArticleType.id == type_id).first()
+    if not tp:
+        raise HTTPException(status_code=404, detail="Tipo no encontrado")
+    
+    old_name = tp.nombre
+    if type_in.nombre:
+        tp.nombre = type_in.nombre.strip()
+        # Update items with this type
+        db.query(models.Item).filter(models.Item.tipo_articulo == old_name).update({"tipo_articulo": tp.nombre})
+
+    if type_in.descripcion is not None:
+        tp.descripcion = type_in.descripcion
+    if type_in.prefijo is not None:
+        tp.prefijo = type_in.prefijo
+
+    db.commit()
+    db.refresh(tp)
+    count = db.query(models.Item).filter(models.Item.tipo_articulo == tp.nombre).count()
+    return {"id": tp.id, "nombre": tp.nombre, "descripcion": tp.descripcion, "prefijo": tp.prefijo, "items_count": count, "fecha_creacion": tp.fecha_creacion}
+
+@app.delete("/types/{type_id}")
+def delete_article_type(type_id: int, db: Session = Depends(get_db)):
+    tp = db.query(models.ArticleType).filter(models.ArticleType.id == type_id).first()
+    if not tp:
+        raise HTTPException(status_code=404, detail="Tipo no encontrado")
+    db.delete(tp)
+    db.commit()
+    return {"message": "Tipo eliminado", "id": type_id}
+
+# ==================== ITEMS CRUD ====================
 @app.get("/items", response_model=List[schemas.ItemResponse])
 def get_items(
     q: Optional[str] = Query(None, description="Búsqueda por nombre, código, BN, descripción o ubicación"),
