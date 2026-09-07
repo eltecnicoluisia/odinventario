@@ -4,6 +4,8 @@ from datetime import datetime
 
 class ItemBase(BaseModel):
     codigo: Optional[str] = None
+    numero_bien_nacional: Optional[str] = None
+    tipo_articulo: Optional[str] = "Activo Fijo"
     nombre: str
     descripcion: Optional[str] = None
     categoria: Optional[str] = "General"
@@ -16,6 +18,8 @@ class ItemCreate(ItemBase):
 
 class ItemUpdate(BaseModel):
     codigo: Optional[str] = None
+    numero_bien_nacional: Optional[str] = None
+    tipo_articulo: Optional[str] = None
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     categoria: Optional[str] = None

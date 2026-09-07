@@ -5,6 +5,8 @@ import React, { useState, useEffect, useMemo } from "react";
 interface Item {
   id: number;
   codigo: string | null;
+  numero_bien_nacional: string | null;
+  tipo_articulo: string | null;
   nombre: string;
   descripcion: string | null;
   categoria: string | null;
@@ -22,7 +24,19 @@ interface Stats {
   low_stock: number;
   categories_count: number;
   categories: string[];
+  tipos: string[];
+  bien_nacional_count: number;
 }
+
+const DEFAULT_TIPOS = [
+  "Activo Fijo",
+  "Equipo Tecnológico",
+  "Mobiliario",
+  "Consumible",
+  "Herramienta",
+  "Redes y Telecom",
+  "Material de Oficina",
+];
 
 export default function Dashboard() {
   const [items, setItems] = useState<Item[]>([]);
@@ -33,10 +47,13 @@ export default function Dashboard() {
     low_stock: 0,
     categories_count: 0,
     categories: [],
+    tipos: [],
+    bien_nacional_count: 0,
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
+  const [selectedTipo, setSelectedTipo] = useState("Todos");
   const [stockFilter, setStockFilter] = useState<"todos" | "bajo" | "ok">("todos");
 
   // Modals
@@ -47,6 +64,8 @@ export default function Dashboard() {
   // Form State
   const [formData, setFormData] = useState({
     codigo: "",
+    numero_bien_nacional: "",
+    tipo_articulo: "Activo Fijo",
     nombre: "",
     descripcion: "",
     categoria: "General",
@@ -54,6 +73,9 @@ export default function Dashboard() {
     precio_unitario: 0.0,
     ubicacion: "",
   });
+
+  const [customCategory, setCustomCategory] = useState("");
+  const [customTipo, setCustomTipo] = useState("");
 
   // Bulk Upload State
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -102,14 +124,21 @@ export default function Dashboard() {
   // Filtered items
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      const search = searchTerm.toLowerCase();
       const matchesSearch =
-        item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.codigo && item.codigo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.descripcion && item.descripcion.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.ubicacion && item.ubicacion.toLowerCase().includes(searchTerm.toLowerCase()));
+        item.nombre.toLowerCase().includes(search) ||
+        (item.codigo && item.codigo.toLowerCase().includes(search)) ||
+        (item.numero_bien_nacional && item.numero_bien_nacional.toLowerCase().includes(search)) ||
+        (item.tipo_articulo && item.tipo_articulo.toLowerCase().includes(search)) ||
+        (item.categoria && item.categoria.toLowerCase().includes(search)) ||
+        (item.descripcion && item.descripcion.toLowerCase().includes(search)) ||
+        (item.ubicacion && item.ubicacion.toLowerCase().includes(search));
 
       const matchesCat =
         selectedCategory === "Todas" || item.categoria === selectedCategory;
+
+      const matchesTipo =
+        selectedTipo === "Todos" || item.tipo_articulo === selectedTipo;
 
       const matchesStock =
         stockFilter === "todos"
@@ -118,22 +147,26 @@ export default function Dashboard() {
           ? item.cantidad <= 3
           : item.cantidad > 3;
 
-      return matchesSearch && matchesCat && matchesStock;
+      return matchesSearch && matchesCat && matchesTipo && matchesStock;
     });
-  }, [items, searchTerm, selectedCategory, stockFilter]);
+  }, [items, searchTerm, selectedCategory, selectedTipo, stockFilter]);
 
   // Open Modal for New Item
   const handleOpenNewModal = () => {
     setEditingItem(null);
     setFormData({
       codigo: `ITM-${Math.floor(1000 + Math.random() * 9000)}`,
+      numero_bien_nacional: `BN-${Math.floor(100000 + Math.random() * 900000)}`,
+      tipo_articulo: "Activo Fijo",
       nombre: "",
       descripcion: "",
-      categoria: "General",
+      categoria: stats.categories[0] || "General",
       cantidad: 1,
       precio_unitario: 0.0,
       ubicacion: "",
     });
+    setCustomCategory("");
+    setCustomTipo("");
     setIsItemModalOpen(true);
   };
 
@@ -142,6 +175,8 @@ export default function Dashboard() {
     setEditingItem(item);
     setFormData({
       codigo: item.codigo || "",
+      numero_bien_nacional: item.numero_bien_nacional || "",
+      tipo_articulo: item.tipo_articulo || "Activo Fijo",
       nombre: item.nombre,
       descripcion: item.descripcion || "",
       categoria: item.categoria || "General",
@@ -149,6 +184,8 @@ export default function Dashboard() {
       precio_unitario: item.precio_unitario,
       ubicacion: item.ubicacion || "",
     });
+    setCustomCategory("");
+    setCustomTipo("");
     setIsItemModalOpen(true);
   };
 
@@ -156,9 +193,15 @@ export default function Dashboard() {
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nombre.trim()) {
-      showToast("El nombre del ítem es obligatorio", "error");
+      showToast("El nombre del artículo es obligatorio", "error");
       return;
     }
+
+    const payload = {
+      ...formData,
+      categoria: customCategory.trim() ? customCategory.trim() : formData.categoria,
+      tipo_articulo: customTipo.trim() ? customTipo.trim() : formData.tipo_articulo,
+    };
 
     try {
       if (editingItem) {
@@ -166,10 +209,10 @@ export default function Dashboard() {
         const res = await fetch(`${API_URL}/items/${editingItem.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
-          showToast("Ítem actualizado exitosamente");
+          showToast(`Ítem '${payload.nombre}' actualizado correctamente`);
           setIsItemModalOpen(false);
           fetchData();
         } else {
@@ -180,10 +223,10 @@ export default function Dashboard() {
         const res = await fetch(`${API_URL}/items`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
-          showToast("Ítem registrado en el inventario");
+          showToast(`Ítem '${payload.nombre}' registrado con éxito`);
           setIsItemModalOpen(false);
           fetchData();
         } else {
@@ -191,7 +234,7 @@ export default function Dashboard() {
         }
       }
     } catch (err) {
-      showToast("Error de red al guardar", "error");
+      showToast("Error de conexión al guardar", "error");
     }
   };
 
@@ -204,7 +247,6 @@ export default function Dashboard() {
       if (res.ok) {
         const updated = await res.json();
         setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
-        // Refresh stats
         fetch(`${API_URL}/stats`)
           .then((r) => r.json())
           .then(setStats)
@@ -217,11 +259,11 @@ export default function Dashboard() {
 
   // Delete Item
   const handleDeleteItem = async (id: number, nombre: string) => {
-    if (!confirm(`¿Confirmas eliminar permanentemente '${nombre}'?`)) return;
+    if (!confirm(`¿Confirmas eliminar permanentemente el ítem '${nombre}'?`)) return;
     try {
       const res = await fetch(`${API_URL}/items/${id}`, { method: "DELETE" });
       if (res.ok) {
-        showToast("Ítem eliminado");
+        showToast("Ítem eliminado correctamente");
         fetchData();
       } else {
         showToast("Error al eliminar", "error");
@@ -298,7 +340,7 @@ export default function Dashboard() {
                 ODINVENTARIO
               </h1>
               <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-full">
-                v2.0 Omni-Stack
+                Control Institucional & Bienes Nacionales
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -312,7 +354,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchData}
-            title="Refrescar catálogo"
+            title="Refrescar datos"
             className="p-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,7 +379,7 @@ export default function Dashboard() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>Agregar Ítem</span>
+            <span>+ Agregar Ítem</span>
           </button>
         </div>
       </header>
@@ -345,7 +387,7 @@ export default function Dashboard() {
       <main className="p-6 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6">
         {/* KPI Statistics Cards */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Total Items */}
+          {/* Card 1: Total Catálogo */}
           <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-blue-500/40 transition-all">
             <div className="absolute -right-3 -top-3 w-20 h-20 bg-blue-600/10 rounded-full blur-xl group-hover:bg-blue-600/20 transition-all"></div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -361,25 +403,25 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Card 2: Total Units */}
-          <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-cyan-500/40 transition-all">
-            <div className="absolute -right-3 -top-3 w-20 h-20 bg-cyan-600/10 rounded-full blur-xl group-hover:bg-cyan-600/20 transition-all"></div>
+          {/* Card 2: Bienes Nacionales */}
+          <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-purple-500/40 transition-all">
+            <div className="absolute -right-3 -top-3 w-20 h-20 bg-purple-600/10 rounded-full blur-xl group-hover:bg-purple-600/20 transition-all"></div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Stock Físico Total
+              Bienes Nacionales (BN)
             </p>
             <div className="flex items-baseline justify-between mt-2">
-              <h3 className="text-3xl font-extrabold text-white tracking-tight">
-                {stats.total_stock}
+              <h3 className="text-3xl font-extrabold text-purple-400 tracking-tight">
+                {stats.bien_nacional_count}
               </h3>
-              <span className="text-xs text-slate-400 font-medium">unidades</span>
+              <span className="text-xs text-purple-300 font-medium">identificados</span>
             </div>
           </div>
 
-          {/* Card 3: Total Valuation */}
+          {/* Card 3: Total Stock & Valoración */}
           <div className="p-5 rounded-2xl bg-gradient-to-b from-[#11192e] to-[#0c1222] border border-slate-800/80 shadow-lg relative overflow-hidden group hover:border-emerald-500/40 transition-all">
             <div className="absolute -right-3 -top-3 w-20 h-20 bg-emerald-600/10 rounded-full blur-xl group-hover:bg-emerald-600/20 transition-all"></div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Valoración Inventario
+              Stock ({stats.total_stock} uds) • Valor
             </p>
             <div className="flex items-baseline justify-between mt-2">
               <h3 className="text-3xl font-extrabold text-emerald-400 tracking-tight">
@@ -424,7 +466,7 @@ export default function Dashboard() {
               </span>
               <input
                 type="text"
-                placeholder="Buscar por código, nombre, ubicación..."
+                placeholder="Buscar por Nombre, N° Bien Nacional, SKU, Categoría..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-slate-900/90 border border-slate-700/70 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
@@ -449,6 +491,20 @@ export default function Dashboard() {
               {stats.categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
+                </option>
+              ))}
+            </select>
+
+            {/* Tipo de Artículo Filter */}
+            <select
+              value={selectedTipo}
+              onChange={(e) => setSelectedTipo(e.target.value)}
+              className="py-2 px-3.5 bg-slate-900/90 border border-slate-700/70 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="Todos">Tipo: Todos</option>
+              {DEFAULT_TIPOS.map((tp) => (
+                <option key={tp} value={tp}>
+                  {tp}
                 </option>
               ))}
             </select>
@@ -490,7 +546,7 @@ export default function Dashboard() {
 
           <div className="text-xs text-slate-400 font-medium whitespace-nowrap">
             Mostrando <span className="text-white font-bold">{filteredItems.length}</span> de{" "}
-            <span className="text-white font-bold">{items.length}</span> ítems
+            <span className="text-white font-bold">{items.length}</span> registros
           </div>
         </section>
 
@@ -501,8 +557,9 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-slate-800 bg-[#090e1c] text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4">Código / SKU</th>
-                  <th className="py-3.5 px-4">Ítem / Descripción</th>
-                  <th className="py-3.5 px-4">Categoría</th>
+                  <th className="py-3.5 px-4">Bien Nacional (BN)</th>
+                  <th className="py-3.5 px-4">Artículo / Descripción</th>
+                  <th className="py-3.5 px-4">Tipo & Categoría</th>
                   <th className="py-3.5 px-4 text-center">Stock</th>
                   <th className="py-3.5 px-4 text-right">Precio Unitario</th>
                   <th className="py-3.5 px-4 text-right">Subtotal</th>
@@ -513,31 +570,31 @@ export default function Dashboard() {
               <tbody className="divide-y divide-slate-800/60">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-slate-400">
+                    <td colSpan={9} className="py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-sm">Cargando inventario desde el servidor...</p>
+                        <p className="text-sm">Cargando catálogo institucional...</p>
                       </div>
                     </td>
                   </tr>
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-slate-400">
+                    <td colSpan={9} className="py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-500 text-xl">
-                          📦
+                          🏷️
                         </div>
                         <p className="text-base font-semibold text-slate-300">
-                          No se encontraron ítems
+                          No se encontraron artículos
                         </p>
                         <p className="text-xs text-slate-500 max-w-sm">
-                          Prueba cambiando los filtros de búsqueda o agrega un nuevo producto manual con el botón superior.
+                          No hay registros que coincidan con los filtros actuales.
                         </p>
                         <button
                           onClick={handleOpenNewModal}
                           className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium"
                         >
-                          + Agregar Nuevo Ítem
+                          + Registrar Primer Artículo
                         </button>
                       </div>
                     </td>
@@ -553,8 +610,19 @@ export default function Dashboard() {
                         className="hover:bg-slate-800/40 transition-colors group"
                       >
                         {/* SKU */}
-                        <td className="py-3.5 px-4 font-mono text-xs text-blue-400 font-semibold whitespace-nowrap">
+                        <td className="py-3.5 px-4 font-mono text-xs text-slate-400 font-semibold whitespace-nowrap">
                           {item.codigo || "S/C"}
+                        </td>
+
+                        {/* Bien Nacional */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {item.numero_bien_nacional ? (
+                            <span className="px-2 py-1 text-xs rounded-md bg-purple-950/70 text-purple-300 border border-purple-800/80 font-mono font-bold">
+                              {item.numero_bien_nacional}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-600 italic">No asignado</span>
+                          )}
                         </td>
 
                         {/* Nombre & Descripción */}
@@ -569,11 +637,16 @@ export default function Dashboard() {
                           )}
                         </td>
 
-                        {/* Categoría */}
+                        {/* Tipo & Categoría */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className="px-2.5 py-1 text-xs rounded-full bg-slate-800 text-slate-300 border border-slate-700/80 font-medium">
-                            {item.categoria || "General"}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[11px] font-semibold text-cyan-400">
+                              {item.tipo_articulo || "Activo Fijo"}
+                            </span>
+                            <span className="px-2 py-0.5 text-[11px] rounded bg-slate-800 text-slate-300 border border-slate-700/80 w-fit">
+                              {item.categoria || "General"}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Stock Controls */}
@@ -631,7 +704,7 @@ export default function Dashboard() {
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleOpenEditModal(item)}
-                              title="Editar Ítem"
+                              title="Editar / Modificar"
                               className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-blue-600/30 text-slate-300 hover:text-blue-400 border border-slate-700/60 transition-all"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -640,7 +713,7 @@ export default function Dashboard() {
                             </button>
                             <button
                               onClick={() => handleDeleteItem(item.id, item.nombre)}
-                              title="Eliminar Ítem"
+                              title="Eliminar Artículo"
                               className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 border border-slate-700/60 transition-all"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -659,14 +732,14 @@ export default function Dashboard() {
         </section>
       </main>
 
-      {/* MODAL: Crear / Editar Ítem */}
+      {/* MODAL: Crear / Modificar Ítem */}
       {isItemModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl p-6 relative flex flex-col gap-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                {editingItem ? "Editar Ítem de Inventario" : "Registrar Nuevo Ítem"}
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                {editingItem ? `Modificar: ${editingItem.nombre}` : "Registrar Artículo / Bien Nacional"}
               </h3>
               <button
                 onClick={() => setIsItemModalOpen(false)}
@@ -677,51 +750,110 @@ export default function Dashboard() {
             </div>
 
             <form onSubmit={handleSaveItem} className="flex flex-col gap-3.5 text-sm">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Código / SKU
+                    Código Interno / SKU
                   </label>
                   <input
                     type="text"
                     value={formData.codigo}
                     onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                     placeholder="Ej. SRV-001"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 font-mono text-xs"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Categoría
+                  <label className="block text-xs font-semibold text-purple-400 mb-1">
+                    N° de Bien Nacional (BN)
                   </label>
                   <input
                     type="text"
-                    value={formData.categoria}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                    placeholder="Ej. Servidores, Redes..."
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
+                    value={formData.numero_bien_nacional}
+                    onChange={(e) => setFormData({ ...formData, numero_bien_nacional: e.target.value })}
+                    placeholder="Ej. BN-2024-00412"
+                    className="w-full px-3 py-2 bg-slate-900 border border-purple-800/80 rounded-xl text-purple-200 placeholder-purple-900/60 focus:outline-none focus:border-purple-500 font-mono text-xs"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Nombre del Ítem *
+                  Nombre del Artículo / Equipo *
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  placeholder="Ej. Switch Cisco 48 Puertos"
+                  placeholder="Ej. Computadora de Escritorio Dell OptiPlex 7090"
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Tipo de Artículo & Categoría Dinámica */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-cyan-400 mb-1">
+                    Tipo de Artículo
+                  </label>
+                  <select
+                    value={formData.tipo_articulo}
+                    onChange={(e) => setFormData({ ...formData, tipo_articulo: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-500 text-xs mb-1.5 cursor-pointer"
+                  >
+                    {DEFAULT_TIPOS.map((tp) => (
+                      <option key={tp} value={tp}>
+                        {tp}
+                      </option>
+                    ))}
+                    <option value="Otro">Otro (personalizado)...</option>
+                  </select>
+                  {formData.tipo_articulo === "Otro" && (
+                    <input
+                      type="text"
+                      placeholder="Escribe nuevo tipo..."
+                      value={customTipo}
+                      onChange={(e) => setCustomTipo(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-cyan-700 rounded-lg text-xs text-cyan-200"
+                    />
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Cantidad Stock
+                    Categoría
+                  </label>
+                  <select
+                    value={formData.categoria}
+                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-xs mb-1.5 cursor-pointer"
+                  >
+                    {stats.categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                    <option value="+ Nueva">+ Agregar Nueva Categoría...</option>
+                  </select>
+                  {formData.categoria === "+ Nueva" && (
+                    <input
+                      type="text"
+                      placeholder="Nombre de la nueva categoría..."
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-blue-700 rounded-lg text-xs text-blue-200"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Cantidad y Precio */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">
+                    Cantidad Física en Stock
                   </label>
                   <input
                     type="number"
@@ -733,7 +865,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Precio Unitario ($)
+                    Precio Unitario ($ USD)
                   </label>
                   <input
                     type="number"
@@ -748,26 +880,26 @@ export default function Dashboard() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Ubicación en Almacén / Estante
+                  Ubicación Física (Departamento, Almacén, Estante)
                 </label>
                 <input
                   type="text"
                   value={formData.ubicacion}
                   onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                  placeholder="Ej. Estante A-12, Almacén Central"
+                  placeholder="Ej. Gerencia de Sistemas - Oficina 204"
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Descripción Técnica / Notas
+                  Descripción Técnica, Seriales o Especificaciones
                 </label>
                 <textarea
                   rows={2}
                   value={formData.descripcion}
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  placeholder="Especificaciones o detalles adicionales..."
+                  placeholder="Marca, modelo, número de serie o condiciones del bien..."
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -784,7 +916,7 @@ export default function Dashboard() {
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-lg shadow-blue-600/30 transition-all"
                 >
-                  {editingItem ? "Actualizar Cambios" : "Guardar en Inventario"}
+                  {editingItem ? "Guardar Modificaciones" : "Registrar Artículo"}
                 </button>
               </div>
             </form>
@@ -810,7 +942,7 @@ export default function Dashboard() {
             </div>
 
             <p className="text-xs text-slate-400">
-              Adjunta una hoja de cálculo (Excel), documento Word o PDF. Nuestro motor de IA analizará y ubicará de forma automática cada producto en su respectiva categoría.
+              Adjunta una hoja de cálculo (Excel), documento Word o PDF. El motor de IA clasificará cada artículo, detectará si posee Bien Nacional o SKU, y lo ubicará automáticamente en el catálogo.
             </p>
 
             <form onSubmit={handleUploadSubmit} className="flex flex-col gap-4">
@@ -858,7 +990,7 @@ export default function Dashboard() {
                   {uploading ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Procesando...</span>
+                      <span>Procesando archivo...</span>
                     </>
                   ) : (
                     <span>Iniciar Carga Masiva</span>

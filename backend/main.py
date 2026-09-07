@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, text
 from typing import List, Optional
 
 from database import engine, get_db, Base
@@ -9,8 +9,19 @@ import models
 import schemas
 from services import process_uploaded_file
 
-# Initialize DB tables
+# Initialize DB tables & run automatic migrations
 Base.metadata.create_all(bind=engine)
+
+def auto_migrate():
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE items ADD COLUMN IF NOT EXISTS numero_bien_nacional VARCHAR;"))
+        conn.execute(text("ALTER TABLE items ADD COLUMN IF NOT EXISTS tipo_articulo VARCHAR;"))
+        conn.commit()
+
+try:
+    auto_migrate()
+except Exception as e:
+    print(f"Migration note: {e}")
 
 app = FastAPI(title="OdInventario API")
 
@@ -21,32 +32,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-def seed_initial_data():
-    """Seeds sample data if database is brand new"""
-    from database import SessionLocal
-    db = SessionLocal()
-    try:
-        count = db.query(models.Item).count()
-        if count == 0:
-            sample_items = [
-                models.Item(codigo="SRV-DL-R740", nombre="Servidor Dell PowerEdge R740", descripcion="2x Xeon Silver 4210R, 64GB RAM, 2x 480GB SSD", categoria="Servidores", cantidad=4, precio_unitario=3450.00, ubicacion="Rack Principal - Fila A"),
-                models.Item(codigo="SW-CIS-9200", nombre="Switch Cisco Catalyst 9200L 48P PoE+", descripcion="Switch administrable Gigabit L3 con fuentes redundantes", categoria="Redes", cantidad=8, precio_unitario=1890.50, ubicacion="Almacén Redes - Estante 2"),
-                models.Item(codigo="RT-MIK-CCR2", nombre="Router MikroTik CCR2004-1G-12S+2XS", descripcion="Router Cloud Core para borde de red con puertos 10G/25G", categoria="Redes", cantidad=3, precio_unitario=590.00, ubicacion="Laboratorio Redes"),
-                models.Item(codigo="SFP-10G-SR", nombre="Transceiver SFP+ 10GBASE-SR 850nm", descripcion="Módulo óptico multimodo LC dúplex hasta 300m", categoria="Conectividad", cantidad=45, precio_unitario=32.00, ubicacion="Gaveta Óptica 03"),
-                models.Item(codigo="UPS-APC-3K", nombre="UPS Online APC Smart-UPS RT 3000VA", descripcion="Sistema de respaldo eléctrico con tarjeta de red SNMP", categoria="Energía", cantidad=2, precio_unitario=1420.00, ubicacion="Sala de Energía"),
-                models.Item(codigo="CAB-UTP-CAT6A", nombre="Bobina Cable UTP Cat6A 305m 100% Cobre", descripcion="Cable estructurado LSZH azul para centros de datos", categoria="Cableado", cantidad=12, precio_unitario=185.00, ubicacion="Bodega General - Palet 1"),
-                models.Item(codigo="SSD-NVME-2TB", nombre="Disco SSD Samsung 990 PRO 2TB NVMe", descripcion="Almacenamiento ultrarrápido PCIe 4.0 para estaciones de trabajo", categoria="Componentes", cantidad=1, precio_unitario=175.00, ubicacion="Gabinete Seguro B"),
-            ]
-            db.bulk_save_objects(sample_items)
-            db.commit()
-    except Exception as e:
-        print(f"Error seeding data: {e}")
-        db.rollback()
-    finally:
-        db.close()
-
-seed_initial_data()
 
 @app.get("/health")
 def health_check():
@@ -60,8 +45,10 @@ def get_inventory_stats(db: Session = Depends(get_db)):
     total_value = sum((item.cantidad * (item.precio_unitario or 0.0)) for item in items)
     low_stock = sum(1 for item in items if item.cantidad <= 3)
     
-    # Categories breakdown
+    # Categories & Types
     categories_set = set(item.categoria for item in items if item.categoria)
+    types_set = set(item.tipo_articulo for item in items if item.tipo_articulo)
+    bien_nacional_count = sum(1 for item in items if item.numero_bien_nacional)
     
     return {
         "total_items": total_items,
@@ -69,13 +56,16 @@ def get_inventory_stats(db: Session = Depends(get_db)):
         "total_value": round(total_value, 2),
         "low_stock": low_stock,
         "categories_count": len(categories_set),
-        "categories": sorted(list(categories_set))
+        "categories": sorted(list(categories_set)),
+        "tipos": sorted(list(types_set)),
+        "bien_nacional_count": bien_nacional_count
     }
 
 @app.get("/items", response_model=List[schemas.ItemResponse])
 def get_items(
-    q: Optional[str] = Query(None, description="Búsqueda por nombre, código o descripción"),
+    q: Optional[str] = Query(None, description="Búsqueda por nombre, código, BN, descripción o ubicación"),
     categoria: Optional[str] = Query(None, description="Filtrar por categoría"),
+    tipo: Optional[str] = Query(None, description="Filtrar por tipo de artículo"),
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Item)
@@ -85,6 +75,8 @@ def get_items(
             or_(
                 models.Item.nombre.ilike(search),
                 models.Item.codigo.ilike(search),
+                models.Item.numero_bien_nacional.ilike(search),
+                models.Item.tipo_articulo.ilike(search),
                 models.Item.descripcion.ilike(search),
                 models.Item.ubicacion.ilike(search)
             )
@@ -92,12 +84,17 @@ def get_items(
     if categoria and categoria != "Todas":
         query = query.filter(models.Item.categoria == categoria)
         
+    if tipo and tipo != "Todos":
+        query = query.filter(models.Item.tipo_articulo == tipo)
+        
     return query.order_by(models.Item.id.desc()).all()
 
 @app.post("/items", response_model=schemas.ItemResponse)
 def create_item(item_in: schemas.ItemCreate, db: Session = Depends(get_db)):
     item = models.Item(
         codigo=item_in.codigo or f"ITM-{db.query(models.Item).count() + 1001}",
+        numero_bien_nacional=item_in.numero_bien_nacional,
+        tipo_articulo=item_in.tipo_articulo or "Activo Fijo",
         nombre=item_in.nombre,
         descripcion=item_in.descripcion,
         categoria=item_in.categoria or "General",

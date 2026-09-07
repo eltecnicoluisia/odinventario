@@ -7,6 +7,8 @@ class Item(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     codigo = Column(String, index=True, nullable=True)
+    numero_bien_nacional = Column(String, index=True, nullable=True) # N° Bien Nacional
+    tipo_articulo = Column(String, index=True, nullable=True)       # Ej: Activo Fijo, Consumible, Equipo...
     nombre = Column(String, index=True, nullable=False)
     descripcion = Column(Text, nullable=True)
     categoria = Column(String, index=True, nullable=True)
