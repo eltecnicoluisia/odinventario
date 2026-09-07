@@ -46,6 +46,38 @@ class ArticleTypeResponse(ArticleTypeBase):
     class Config:
         from_attributes = True
 
+# Sede / Facility Schemas (Galpones, Oficinas, Almacenes)
+class SedeBase(BaseModel):
+    nombre: str
+    tipo: Optional[str] = "Galpón"
+    estado: str
+    ciudad: Optional[str] = None
+    direccion: Optional[str] = None
+    responsable: Optional[str] = None
+    telefono: Optional[str] = None
+    capacidad: Optional[str] = None
+
+class SedeCreate(SedeBase):
+    pass
+
+class SedeUpdate(BaseModel):
+    nombre: Optional[str] = None
+    tipo: Optional[str] = None
+    estado: Optional[str] = None
+    ciudad: Optional[str] = None
+    direccion: Optional[str] = None
+    responsable: Optional[str] = None
+    telefono: Optional[str] = None
+    capacidad: Optional[str] = None
+
+class SedeResponse(SedeBase):
+    id: int
+    items_count: Optional[int] = 0
+    fecha_creacion: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 # Item Schemas
 class ItemBase(BaseModel):
     codigo: Optional[str] = None
@@ -56,6 +88,8 @@ class ItemBase(BaseModel):
     categoria: Optional[str] = "General"
     cantidad: int = 0
     precio_unitario: float = 0.0
+    estado: Optional[str] = "Distrito Capital"
+    sede: Optional[str] = None
     ubicacion: Optional[str] = None
 
 class ItemCreate(ItemBase):
@@ -70,6 +104,8 @@ class ItemUpdate(BaseModel):
     categoria: Optional[str] = None
     cantidad: Optional[int] = None
     precio_unitario: Optional[float] = None
+    estado: Optional[str] = None
+    sede: Optional[str] = None
     ubicacion: Optional[str] = None
 
 class ItemResponse(ItemBase):

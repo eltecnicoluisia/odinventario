@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import VenezuelaMap, { StateStats } from "../components/VenezuelaMap";
+import { VENEZUELA_STATES_PATHS } from "../components/venezuelaData";
 
 interface Item {
   id: number;
@@ -13,8 +15,24 @@ interface Item {
   cantidad: number;
   precio_unitario: number;
   ubicacion: string | null;
+  estado?: string | null;
+  sede?: string | null;
   fecha_creacion?: string;
   fecha_actualizacion?: string;
+}
+
+interface Sede {
+  id: number;
+  nombre: string;
+  tipo: string;
+  estado: string;
+  ciudad: string | null;
+  direccion: string | null;
+  responsable: string | null;
+  telefono: string | null;
+  capacidad: string | null;
+  items_count?: number;
+  fecha_creacion?: string;
 }
 
 interface Category {
@@ -44,6 +62,9 @@ interface Stats {
   categories: string[];
   tipos: string[];
   bien_nacional_count: number;
+  total_sedes?: number;
+  states_data?: Record<string, StateStats>;
+  states_list?: string[];
 }
 
 const COLOR_PRESETS = [
@@ -58,12 +79,14 @@ const COLOR_PRESETS = [
 ];
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<"inventory" | "categories" | "types" | "bulk">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "map" | "categories" | "types" | "bulk">("inventory");
   
   // Data lists
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [types, setTypes] = useState<ArticleType[]>([]);
+  const [sedes, setSedes] = useState<Sede[]>([]);
+  const [selectedMapState, setSelectedMapState] = useState<string | null>("Distrito Capital");
   const [stats, setStats] = useState<Stats>({
     total_items: 0,
     total_stock: 0,
@@ -93,6 +116,18 @@ export default function Dashboard() {
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isIosModalOpen, setIsIosModalOpen] = useState(false);
+  const [isSedeModalOpen, setIsSedeModalOpen] = useState(false);
+  const [editingSede, setEditingSede] = useState<Sede | null>(null);
+  const [sedeFormData, setSedeFormData] = useState({
+    nombre: "",
+    tipo: "Galpón",
+    estado: "Distrito Capital",
+    ciudad: "",
+    direccion: "",
+    responsable: "",
+    telefono: "",
+    capacidad: "",
+  });
 
   // PWA Installation State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -115,6 +150,8 @@ export default function Dashboard() {
     cantidad: 1,
     precio_unitario: 0.0,
     ubicacion: "",
+    estado: "Distrito Capital",
+    sede: "",
   });
 
   // Category Form State
@@ -190,11 +227,12 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resItems, resCats, resTypes, resStats] = await Promise.all([
+      const [resItems, resCats, resTypes, resStats, resSedes] = await Promise.all([
         fetch(`${API_URL}/items`),
         fetch(`${API_URL}/categories`),
         fetch(`${API_URL}/types`),
         fetch(`${API_URL}/stats`),
+        fetch(`${API_URL}/sedes`),
       ]);
 
       if (resItems.ok) {
@@ -292,6 +330,8 @@ export default function Dashboard() {
       cantidad: 1,
       precio_unitario: 0.0,
       ubicacion: "",
+      estado: selectedMapState || "Distrito Capital",
+      sede: "",
     });
     setIsItemModalOpen(true);
   };
@@ -309,6 +349,8 @@ export default function Dashboard() {
       cantidad: item.cantidad,
       precio_unitario: item.precio_unitario,
       ubicacion: item.ubicacion || "",
+      estado: item.estado || "Distrito Capital",
+      sede: item.sede || "",
     });
     setIsItemModalOpen(true);
   };
@@ -567,6 +609,104 @@ export default function Dashboard() {
     }
   };
 
+  // ==================== SEDES (GALPONES, OFICINAS) HANDLERS ====================
+  const handleOpenNewSedeModal = (initialState?: string) => {
+    setEditingSede(null);
+    setSedeFormData({
+      nombre: "",
+      tipo: "Galpón",
+      estado: initialState || selectedMapState || "Distrito Capital",
+      ciudad: "",
+      direccion: "",
+      responsable: "",
+      telefono: "",
+      capacidad: "",
+    });
+    setFormError("");
+    setIsSedeModalOpen(true);
+  };
+
+  const handleEditSede = (sede: Sede) => {
+    setEditingSede(sede);
+    setSedeFormData({
+      nombre: sede.nombre,
+      tipo: sede.tipo,
+      estado: sede.estado,
+      ciudad: sede.ciudad || "",
+      direccion: sede.direccion || "",
+      responsable: sede.responsable || "",
+      telefono: sede.telefono || "",
+      capacidad: sede.capacidad || "",
+    });
+    setFormError("");
+    setIsSedeModalOpen(true);
+  };
+
+  const handleSaveSede = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    if (!sedeFormData.nombre.trim()) {
+      setFormError("El nombre del galpón u oficina es obligatorio.");
+      showToast("El nombre de la sede es obligatorio", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (editingSede) {
+        const res = await fetch(`${API_URL}/sedes/${editingSede.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(sedeFormData),
+        });
+        if (res.ok) {
+          showToast(`Sede '${sedeFormData.nombre}' actualizada con éxito`);
+          setIsSedeModalOpen(false);
+          await fetchData();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setFormError(errData.detail || "Error al actualizar la sede.");
+          showToast(errData.detail || "Error al actualizar", "error");
+        }
+      } else {
+        const res = await fetch(`${API_URL}/sedes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(sedeFormData),
+        });
+        if (res.ok) {
+          showToast(`Sede '${sedeFormData.nombre}' registrada en ${sedeFormData.estado}`);
+          setIsSedeModalOpen(false);
+          await fetchData();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setFormError(errData.detail || "Error al registrar la sede.");
+          showToast(errData.detail || "Error al registrar sede", "error");
+        }
+      }
+    } catch (err) {
+      setFormError("Error de conexión con el backend.");
+      showToast("Error de conexión", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteSede = async (id: number, nombre: string) => {
+    if (!confirm(`¿Eliminar la sede/galpón '${nombre}'?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/sedes/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast(`Sede '${nombre}' eliminada correctamente`);
+        fetchData();
+      } else {
+        showToast("Error al eliminar la sede", "error");
+      }
+    } catch (err) {
+      showToast("Error de conexión al eliminar", "error");
+    }
+  };
+
   // ==================== BULK UPLOAD HANDLER ====================
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -731,6 +871,22 @@ export default function Dashboard() {
               activeTab === "inventory" ? "bg-white/20 text-white" : "bg-slate-800 text-slate-400"
             }`}>
               {items.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("map")}
+            className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === "map"
+                ? "bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-white/30"
+                : "text-slate-400 hover:text-cyan-300 hover:bg-white/5"
+            }`}
+          >
+            <span>🗺️ Cobertura Venezuela</span>
+            <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
+              activeTab === "map" ? "bg-white/25 text-white" : "bg-cyan-950/80 text-cyan-400 border border-cyan-500/30"
+            }`}>
+              {sedes.length} Sedes
             </span>
           </button>
 
@@ -1100,6 +1256,313 @@ export default function Dashboard() {
         )}
 
         {/* ========================================================================= */}
+                {/* ========================================================================= */}
+        {/* TAB 2: COBERTURA VENEZUELA & MAPA INTERACTIVO */}
+        {/* ========================================================================= */}
+        {activeTab === "map" && (
+          <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+            {/* Interactive Vector SVG Map */}
+            <VenezuelaMap
+              statesData={stats.states_data || {}}
+              selectedState={selectedMapState}
+              onSelectState={(st) => setSelectedMapState(st || null)}
+            />
+
+            {/* State Detailed View */}
+            {selectedMapState ? (
+              <div className="flex flex-col gap-5">
+                {/* State Overview Header Card */}
+                {(() => {
+                  const stStats = stats.states_data?.[selectedMapState];
+                  const stateSedes = sedes.filter(
+                    (s) => s.estado.toLowerCase() === selectedMapState.toLowerCase()
+                  );
+                  const stateItems = items.filter(
+                    (it) => (it.estado || "").toLowerCase() === selectedMapState.toLowerCase()
+                  );
+                  const totalValuation = stateItems.reduce(
+                    (acc, it) => acc + it.cantidad * (it.precio_unitario || 0),
+                    0
+                  );
+                  const totalUnits = stateItems.reduce((acc, it) => acc + it.cantidad, 0);
+
+                  return (
+                    <>
+                      <div className="glass-panel rounded-3xl p-5 sm:p-6 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.15)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-bold uppercase tracking-wider">
+                              Estado Seleccionado
+                            </span>
+                            <span className="text-xs text-slate-400">República Bolivariana de Venezuela</span>
+                          </div>
+                          <h2 className="text-2xl sm:text-3xl font-black text-white mt-1 flex items-center gap-2">
+                            📍 {selectedMapState}
+                          </h2>
+                          <p className="text-xs text-slate-300 mt-1">
+                            Gestión centralizada de infraestructura, almacenes, galpones e inventario asignado.
+                          </p>
+                        </div>
+
+                        {/* Fast Actions */}
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <button
+                            onClick={() => handleOpenNewSedeModal(selectedMapState)}
+                            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.35)] border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>🏢 + Registrar Galpón / Oficina</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              handleOpenNewItemModal();
+                              setItemFormData((prev) => ({
+                                ...prev,
+                                estado: selectedMapState,
+                                sede: stateSedes[0]?.nombre || "",
+                              }));
+                            }}
+                            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-[0_0_15px_rgba(59,130,246,0.35)] border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>📦 + Cargar Ítem en {selectedMapState}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* State KPI Cards */}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="glass-panel p-4 rounded-2xl border border-cyan-500/20">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">Galpones / Oficinas</p>
+                          <p className="text-2xl font-black text-cyan-300 mt-1">{stateSedes.length}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Sedes activas registradas</p>
+                        </div>
+
+                        <div className="glass-panel p-4 rounded-2xl border border-blue-500/20">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">Artículos / Ítems</p>
+                          <p className="text-2xl font-black text-blue-300 mt-1">{stateItems.length}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Renglones en catálogo</p>
+                        </div>
+
+                        <div className="glass-panel p-4 rounded-2xl border border-purple-500/20">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">Stock Total</p>
+                          <p className="text-2xl font-black text-purple-300 mt-1">{totalUnits}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Unidades físicas acumuladas</p>
+                        </div>
+
+                        <div className="glass-panel p-4 rounded-2xl border border-emerald-500/20">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase">Valoración del Estado</p>
+                          <p className="text-2xl font-black text-emerald-300 mt-1 font-mono">
+                            ${totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Patrimonio en dólares USD</p>
+                        </div>
+                      </div>
+
+                      {/* Section 1: Galpones & Oficinas en el Estado */}
+                      <div className="glass-panel rounded-3xl p-5 border border-cyan-500/25 shadow-lg flex flex-col gap-4">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+                            <h3 className="text-base sm:text-lg font-bold text-white">
+                              🏢 Galpones, Oficinas y Almacenes ({stateSedes.length})
+                            </h3>
+                          </div>
+                          <button
+                            onClick={() => handleOpenNewSedeModal(selectedMapState)}
+                            className="px-3 py-1.5 rounded-xl glass-panel hover:border-cyan-400/50 text-cyan-300 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            + Nuevo Galpón
+                          </button>
+                        </div>
+
+                        {stateSedes.length === 0 ? (
+                          <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-cyan-500/20 bg-slate-900/40">
+                            <p className="text-3xl mb-2">🏢</p>
+                            <p className="text-sm font-semibold text-slate-300">
+                              No hay galpones u oficinas registradas en {selectedMapState}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Comienza registrando la primera sede operativa o punto de almacenamiento en este estado.
+                            </p>
+                            <button
+                              onClick={() => handleOpenNewSedeModal(selectedMapState)}
+                              className="mt-3 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                            >
+                              + Registrar Primer Galpón en {selectedMapState}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {stateSedes.map((sd) => {
+                              const sedeItemsCount = items.filter(
+                                (it) => it.sede?.toLowerCase() === sd.nombre.toLowerCase()
+                              ).length;
+
+                              return (
+                                <div
+                                  key={sd.id}
+                                  className="glass-panel rounded-2xl p-4 border border-cyan-500/20 hover:border-cyan-400/50 transition-all flex flex-col justify-between group shadow-sm hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+                                >
+                                  <div>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 uppercase tracking-wide">
+                                        {sd.tipo}
+                                      </span>
+                                      <span className="text-[11px] text-slate-400 font-medium">
+                                        📦 {sedeItemsCount} ítems
+                                      </span>
+                                    </div>
+
+                                    <h4 className="text-base font-bold text-white mt-2 group-hover:text-cyan-300 transition-colors">
+                                      {sd.nombre}
+                                    </h4>
+
+                                    <div className="mt-2.5 space-y-1 text-xs text-slate-300">
+                                      {sd.ciudad && (
+                                        <p className="flex items-center gap-1.5 text-slate-400">
+                                          <span>🏙️</span> <span>{sd.ciudad}</span>
+                                        </p>
+                                      )}
+                                      {sd.direccion && (
+                                        <p className="flex items-start gap-1.5 text-slate-400">
+                                          <span>📍</span> <span className="line-clamp-2">{sd.direccion}</span>
+                                        </p>
+                                      )}
+                                      {sd.responsable && (
+                                        <p className="flex items-center gap-1.5 text-slate-300">
+                                          <span>👤</span> <span>{sd.responsable}</span>
+                                        </p>
+                                      )}
+                                      {sd.telefono && (
+                                        <p className="flex items-center gap-1.5 text-slate-300">
+                                          <span>📞</span> <span className="font-mono">{sd.telefono}</span>
+                                        </p>
+                                      )}
+                                      {sd.capacidad && (
+                                        <p className="flex items-center gap-1.5 text-cyan-300/80 text-[11px]">
+                                          <span>📐</span> <span>Capacidad: {sd.capacidad}</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-white/10">
+                                    <button
+                                      onClick={() => handleEditSede(sd)}
+                                      className="px-2.5 py-1 rounded-lg glass-panel hover:border-cyan-400 text-cyan-300 text-xs font-semibold cursor-pointer"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSede(sd.id, sd.nombre)}
+                                      className="px-2.5 py-1 rounded-lg border border-rose-500/30 hover:bg-rose-950/50 text-rose-300 text-xs font-semibold cursor-pointer"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Section 2: Inventario Asignado a este Estado */}
+                      <div className="glass-panel rounded-3xl p-5 border border-cyan-500/25 shadow-lg flex flex-col gap-4">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />
+                            <h3 className="text-base sm:text-lg font-bold text-white">
+                              📦 Artículos Registrados en {selectedMapState} ({stateItems.length})
+                            </h3>
+                          </div>
+                          <button
+                            onClick={() => {
+                              handleOpenNewItemModal();
+                              setItemFormData((prev) => ({
+                                ...prev,
+                                estado: selectedMapState,
+                                sede: stateSedes[0]?.nombre || "",
+                              }));
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold flex items-center gap-1 shadow transition-all cursor-pointer"
+                          >
+                            + Cargar Ítem en {selectedMapState}
+                          </button>
+                        </div>
+
+                        {stateItems.length === 0 ? (
+                          <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-blue-500/20 bg-slate-900/40">
+                            <p className="text-3xl mb-2">📦</p>
+                            <p className="text-sm font-semibold text-slate-300">
+                              Aún no hay artículos asignados a {selectedMapState}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Puedes crear un nuevo artículo o editar uno existente asignándole este estado y galpón.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto rounded-2xl border border-white/10">
+                            <table className="w-full text-left text-xs text-slate-300">
+                              <thead className="bg-slate-950/80 text-slate-400 uppercase font-bold border-b border-white/10">
+                                <tr>
+                                  <th className="p-3">Código / SKU</th>
+                                  <th className="p-3">Bien Nacional</th>
+                                  <th className="p-3">Nombre del Artículo</th>
+                                  <th className="p-3">Galpón / Sede</th>
+                                  <th className="p-3 text-center">Stock</th>
+                                  <th className="p-3 text-right">Precio Unit.</th>
+                                  <th className="p-3 text-right">Subtotal</th>
+                                  <th className="p-3 text-center">Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {stateItems.map((it) => (
+                                  <tr key={it.id} className="hover:bg-white/5 transition-colors">
+                                    <td className="p-3 font-mono text-cyan-300 font-bold">{it.codigo || "—"}</td>
+                                    <td className="p-3 font-mono text-purple-300">{it.numero_bien_nacional || "—"}</td>
+                                    <td className="p-3 font-semibold text-white">{it.nombre}</td>
+                                    <td className="p-3">
+                                      <span className="px-2 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-500/30 text-cyan-200 text-[11px]">
+                                        {it.sede || "General"}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 text-center font-bold text-white">{it.cantidad}</td>
+                                    <td className="p-3 text-right font-mono">${(it.precio_unitario || 0).toFixed(2)}</td>
+                                    <td className="p-3 text-right font-mono text-emerald-400 font-bold">
+                                      ${((it.cantidad || 0) * (it.precio_unitario || 0)).toFixed(2)}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <button
+                                        onClick={() => handleOpenEditItemModal(it)}
+                                        className="text-cyan-400 hover:text-cyan-300 hover:underline font-semibold cursor-pointer"
+                                      >
+                                        Editar
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="text-center py-10 glass-panel rounded-3xl border border-cyan-500/20">
+                <p className="text-4xl mb-2">🇻🇪</p>
+                <h3 className="text-lg font-bold text-white">Selecciona un Estado en el Mapa</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                  Haz clic sobre cualquier estado de Venezuela para desplegar sus galpones, almacenes, oficinas y catálogo de artículos.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* TAB 2: CATEGORÍAS */}
         {/* ========================================================================= */}
         {activeTab === "categories" && (
@@ -1373,6 +1836,16 @@ export default function Dashboard() {
         </button>
 
         <button
+          onClick={() => setActiveTab("map")}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "map" ? "text-cyan-300 font-bold scale-105" : "text-slate-400"
+          }`}
+        >
+          <span className="text-lg">🗺️</span>
+          <span className="text-[10px]">Venezuela</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab("categories")}
           className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
             activeTab === "categories" ? "text-cyan-400 font-bold scale-105" : "text-slate-400"
@@ -1571,14 +2044,45 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-cyan-400 mb-1">Estado de Venezuela</label>
+                  <select
+                    value={itemFormData.estado}
+                    onChange={(e) => setItemFormData({ ...itemFormData, estado: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400 text-xs cursor-pointer"
+                  >
+                    {VENEZUELA_STATES_PATHS.map((st) => (
+                      <option key={st.id} value={st.title}>{st.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-cyan-400 mb-1">Galpón / Sede</label>
+                  <select
+                    value={itemFormData.sede}
+                    onChange={(e) => setItemFormData({ ...itemFormData, sede: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400 text-xs cursor-pointer"
+                  >
+                    <option value="">-- Sin Galpón Específico --</option>
+                    {sedes
+                      .filter((s) => !itemFormData.estado || s.estado.toLowerCase() === itemFormData.estado.toLowerCase())
+                      .map((s) => (
+                        <option key={s.id} value={s.nombre}>{s.nombre} ({s.tipo})</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Ubicación Física</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Ubicación Física Interna (Rack, Pasillo, etc.)</label>
                 <input
                   type="text"
                   value={itemFormData.ubicacion}
                   onChange={(e) => setItemFormData({ ...itemFormData, ubicacion: e.target.value })}
-                  placeholder="Ej. Centro de Cómputo - Rack 04"
-                  className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400"
+                  placeholder="Ej. Pasillo 3, Estante B, Nivel 2"
+                  className="w-full px-3 py-2 bg-[#080d1a]/80 border border-slate-700/80 rounded-xl text-slate-100 focus:outline-none focus:border-cyan-400 text-xs"
                 />
               </div>
 

@@ -16,12 +16,24 @@ def auto_migrate():
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE items ADD COLUMN IF NOT EXISTS numero_bien_nacional VARCHAR;"))
         conn.execute(text("ALTER TABLE items ADD COLUMN IF NOT EXISTS tipo_articulo VARCHAR;"))
+        conn.execute(text("ALTER TABLE items ADD COLUMN IF NOT EXISTS estado VARCHAR;"))
+        conn.execute(text("ALTER TABLE items ADD COLUMN IF NOT EXISTS sede VARCHAR;"))
+        # Set default estado for items that might be null
+        conn.execute(text("UPDATE items SET estado = 'Distrito Capital' WHERE estado IS NULL;"))
         conn.commit()
 
 try:
     auto_migrate()
 except Exception as e:
     print(f"Migration note: {e}")
+
+VENEZUELA_STATES = [
+    "Amazonas", "Anzoátegui", "Apure", "Aragua", "Barinas", "Bolívar",
+    "Carabobo", "Cojedes", "Delta Amacuro", "Dependencias Federales",
+    "Distrito Capital", "Falcón", "Guárico", "La Guaira", "Lara",
+    "Mérida", "Miranda", "Monagas", "Nueva Esparta", "Portuguesa",
+    "Sucre", "Táchira", "Trujillo", "Yaracuy", "Zulia"
+]
 
 def seed_defaults():
     from database import SessionLocal
@@ -55,6 +67,26 @@ def seed_defaults():
             ]
             db.bulk_save_objects(default_types)
             db.commit()
+
+        # Seed Default Sedes / Galpones if empty
+        if db.query(models.Sede).count() == 0:
+            default_sedes = [
+                models.Sede(nombre="Galpón Central La Yaguara", tipo="Galpón", estado="Distrito Capital", ciudad="Caracas", direccion="Av. Intercomunal La Yaguara, Parcela 12", responsable="Ing. Carlos Pérez", telefono="0212-4431122", capacidad="1,200 m²"),
+                models.Sede(nombre="Oficina Principal Torre Europa", tipo="Sede Administrativa", estado="Miranda", ciudad="Chacao", direccion="Av. Francisco de Miranda, Piso 8", responsable="Lic. María Rodríguez", telefono="0212-9513344", capacidad="450 m²"),
+                models.Sede(nombre="Almacén Regional Occidente", tipo="Almacén", estado="Zulia", ciudad="Maracaibo", direccion="Zona Industrial Maracaibo Sur, Galpón 4", responsable="Tsu. Roberto Gómez", telefono="0261-7352211", capacidad="800 m²"),
+                models.Sede(nombre="Centro Logístico Carabobo", tipo="Galpón", estado="Carabobo", ciudad="Valencia", direccion="Zona Industrial Castillito, Parcela B", responsable="Ing. Elena Ramos", telefono="0241-8716655", capacidad="1,500 m²"),
+                models.Sede(nombre="Estación Técnica Oriente", tipo="Oficina", estado="Anzoátegui", ciudad="Barcelona", direccion="Av. Jorge Rodríguez, Edif. Oriente", responsable="Ing. Luis Morales", telefono="0281-2869988", capacidad="300 m²"),
+                models.Sede(nombre="Almacén Siderúrgico Guayana", tipo="Almacén", estado="Bolívar", ciudad="Puerto Ordaz", direccion="Zona Industrial Unare II, Calle 3", responsable="Tsu. Javier Soto", telefono="0286-9524433", capacidad="700 m²"),
+            ]
+            db.bulk_save_objects(default_sedes)
+            db.commit()
+
+        # Update items with first sede if null
+        first_sede = db.query(models.Sede).first()
+        if first_sede:
+            db.query(models.Item).filter(models.Item.sede.is_(None)).update({"sede": first_sede.nombre, "estado": first_sede.estado})
+            db.commit()
+
     except Exception as e:
         print(f"Seed defaults note: {e}")
         db.rollback()
@@ -81,6 +113,8 @@ def health_check():
 @app.get("/stats")
 def get_inventory_stats(db: Session = Depends(get_db)):
     items = db.query(models.Item).all()
+    sedes = db.query(models.Sede).all()
+    
     total_items = len(items)
     total_stock = sum(item.cantidad for item in items)
     total_value = sum((item.cantidad * (item.precio_unitario or 0.0)) for item in items)
@@ -96,6 +130,23 @@ def get_inventory_stats(db: Session = Depends(get_db)):
         tipos = sorted(list(set(item.tipo_articulo for item in items if item.tipo_articulo)))
 
     bien_nacional_count = sum(1 for item in items if item.numero_bien_nacional)
+
+    # State Statistics across Venezuela
+    states_data = {}
+    for st in VENEZUELA_STATES:
+        st_items = [it for it in items if (it.estado or "").lower() == st.lower()]
+        st_sedes = [sd for sd in sedes if (sd.estado or "").lower() == st.lower()]
+        st_stock = sum(it.cantidad for it in st_items)
+        st_value = sum((it.cantidad * (it.precio_unitario or 0.0)) for it in st_items)
+        
+        states_data[st] = {
+            "estado": st,
+            "items_count": len(st_items),
+            "total_stock": st_stock,
+            "total_value": round(st_value, 2),
+            "sedes_count": len(st_sedes),
+            "sedes": [s.nombre for s in st_sedes]
+        }
     
     return {
         "total_items": total_items,
@@ -105,8 +156,112 @@ def get_inventory_stats(db: Session = Depends(get_db)):
         "categories_count": len(categories),
         "categories": categories,
         "tipos": tipos,
-        "bien_nacional_count": bien_nacional_count
+        "bien_nacional_count": bien_nacional_count,
+        "total_sedes": len(sedes),
+        "states_data": states_data,
+        "states_list": VENEZUELA_STATES
     }
+
+# ==================== SEDES (GALPONES, OFICINAS, ALMACENES) CRUD ====================
+@app.get("/sedes", response_model=List[schemas.SedeResponse])
+def get_sedes(estado: Optional[str] = Query(None, description="Filtrar por estado de Venezuela"), db: Session = Depends(get_db)):
+    query = db.query(models.Sede)
+    if estado and estado != "Todos":
+        query = query.filter(models.Sede.estado.ilike(f"%{estado}%"))
+    
+    sedes = query.order_by(models.Sede.estado, models.Sede.nombre).all()
+    result = []
+    for s in sedes:
+        count = db.query(models.Item).filter(models.Item.sede == s.nombre).count()
+        result.append({
+            "id": s.id,
+            "nombre": s.nombre,
+            "tipo": s.tipo or "Galpón",
+            "estado": s.estado,
+            "ciudad": s.ciudad,
+            "direccion": s.direccion,
+            "responsable": s.responsable,
+            "telefono": s.telefono,
+            "capacidad": s.capacidad,
+            "items_count": count,
+            "fecha_creacion": s.fecha_creacion
+        })
+    return result
+
+@app.post("/sedes", response_model=schemas.SedeResponse)
+def create_sede(sede_in: schemas.SedeCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.Sede).filter(models.Sede.nombre.ilike(sede_in.nombre.strip())).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe una sede o galpón con ese nombre")
+
+    sede = models.Sede(
+        nombre=sede_in.nombre.strip(),
+        tipo=sede_in.tipo or "Galpón",
+        estado=sede_in.estado.strip(),
+        ciudad=sede_in.ciudad,
+        direccion=sede_in.direccion,
+        responsable=sede_in.responsable,
+        telefono=sede_in.telefono,
+        capacidad=sede_in.capacidad
+    )
+    db.add(sede)
+    db.commit()
+    db.refresh(sede)
+    return {
+        "id": sede.id,
+        "nombre": sede.nombre,
+        "tipo": sede.tipo,
+        "estado": sede.estado,
+        "ciudad": sede.ciudad,
+        "direccion": sede.direccion,
+        "responsable": sede.responsable,
+        "telefono": sede.telefono,
+        "capacidad": sede.capacidad,
+        "items_count": 0,
+        "fecha_creacion": sede.fecha_creacion
+    }
+
+@app.put("/sedes/{sede_id}", response_model=schemas.SedeResponse)
+def update_sede(sede_id: int, sede_in: schemas.SedeUpdate, db: Session = Depends(get_db)):
+    sede = db.query(models.Sede).filter(models.Sede.id == sede_id).first()
+    if not sede:
+        raise HTTPException(status_code=404, detail="Sede o galpón no encontrado")
+
+    old_name = sede.nombre
+    data = sede_in.model_dump(exclude_unset=True)
+    for key, val in data.items():
+        if val is not None:
+            setattr(sede, key, val)
+
+    if sede_in.nombre and sede_in.nombre.strip() != old_name:
+        sede.nombre = sede_in.nombre.strip()
+        db.query(models.Item).filter(models.Item.sede == old_name).update({"sede": sede.nombre})
+
+    db.commit()
+    db.refresh(sede)
+    count = db.query(models.Item).filter(models.Item.sede == sede.nombre).count()
+    return {
+        "id": sede.id,
+        "nombre": sede.nombre,
+        "tipo": sede.tipo,
+        "estado": sede.estado,
+        "ciudad": sede.ciudad,
+        "direccion": sede.direccion,
+        "responsable": sede.responsable,
+        "telefono": sede.telefono,
+        "capacidad": sede.capacidad,
+        "items_count": count,
+        "fecha_creacion": sede.fecha_creacion
+    }
+
+@app.delete("/sedes/{sede_id}")
+def delete_sede(sede_id: int, db: Session = Depends(get_db)):
+    sede = db.query(models.Sede).filter(models.Sede.id == sede_id).first()
+    if not sede:
+        raise HTTPException(status_code=404, detail="Sede o galpón no encontrado")
+    db.delete(sede)
+    db.commit()
+    return {"message": "Sede eliminada correctamente", "id": sede_id}
 
 # ==================== CATEGORIES CRUD ====================
 @app.get("/categories", response_model=List[schemas.CategoryResponse])
@@ -151,7 +306,6 @@ def update_category(cat_id: int, cat_in: schemas.CategoryUpdate, db: Session = D
     old_name = cat.nombre
     if cat_in.nombre:
         cat.nombre = cat_in.nombre.strip()
-        # Update items with this category
         db.query(models.Item).filter(models.Item.categoria == old_name).update({"categoria": cat.nombre})
 
     if cat_in.descripcion is not None:
@@ -215,7 +369,6 @@ def update_article_type(type_id: int, type_in: schemas.ArticleTypeUpdate, db: Se
     old_name = tp.nombre
     if type_in.nombre:
         tp.nombre = type_in.nombre.strip()
-        # Update items with this type
         db.query(models.Item).filter(models.Item.tipo_articulo == old_name).update({"tipo_articulo": tp.nombre})
 
     if type_in.descripcion is not None:
@@ -243,6 +396,8 @@ def get_items(
     q: Optional[str] = Query(None, description="Búsqueda por nombre, código, BN, descripción o ubicación"),
     categoria: Optional[str] = Query(None, description="Filtrar por categoría"),
     tipo: Optional[str] = Query(None, description="Filtrar por tipo de artículo"),
+    estado: Optional[str] = Query(None, description="Filtrar por estado de Venezuela"),
+    sede: Optional[str] = Query(None, description="Filtrar por galpón u oficina"),
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Item)
@@ -254,8 +409,11 @@ def get_items(
                 models.Item.codigo.ilike(search),
                 models.Item.numero_bien_nacional.ilike(search),
                 models.Item.tipo_articulo.ilike(search),
+                models.Item.categoria.ilike(search),
                 models.Item.descripcion.ilike(search),
-                models.Item.ubicacion.ilike(search)
+                models.Item.ubicacion.ilike(search),
+                models.Item.estado.ilike(search),
+                models.Item.sede.ilike(search)
             )
         )
     if categoria and categoria != "Todas":
@@ -263,6 +421,12 @@ def get_items(
         
     if tipo and tipo != "Todos":
         query = query.filter(models.Item.tipo_articulo == tipo)
+
+    if estado and estado != "Todos":
+        query = query.filter(models.Item.estado.ilike(f"%{estado}%"))
+
+    if sede and sede != "Todas":
+        query = query.filter(models.Item.sede == sede)
         
     return query.order_by(models.Item.id.desc()).all()
 
@@ -277,6 +441,8 @@ def create_item(item_in: schemas.ItemCreate, db: Session = Depends(get_db)):
         categoria=item_in.categoria or "General",
         cantidad=item_in.cantidad,
         precio_unitario=item_in.precio_unitario,
+        estado=item_in.estado or "Distrito Capital",
+        sede=item_in.sede,
         ubicacion=item_in.ubicacion
     )
     db.add(item)
