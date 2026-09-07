@@ -12,7 +12,7 @@ from services import process_uploaded_file
 # Initialize DB tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="OdInventario API", root_path="/api")
+app = FastAPI(title="OdInventario API")
 
 app.add_middleware(
     CORSMiddleware,

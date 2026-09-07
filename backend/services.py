@@ -4,11 +4,16 @@ from sqlalchemy.orm import Session
 import models
 import os
 import json
-from openai import OpenAI
-import pdfplumber
-import docx
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def get_openai_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key or api_key == "tu_api_key_aqui":
+        return None
+    try:
+        from openai import OpenAI
+        return OpenAI(api_key=api_key)
+    except Exception as e:
+        print(f"OpenAI init warning: {e}")
+        return None
 
 def extract_text_from_pdf(contents: bytes) -> str:
     text = ""
@@ -31,8 +36,9 @@ def extract_text_from_docx(contents: bytes) -> str:
     return text
 
 def parse_text_with_llm(text: str) -> list:
-    if not os.getenv("OPENAI_API_KEY"):
-        print("No OpenAI API KEY found. Skipping LLM parsing.")
+    client = get_openai_client()
+    if not client:
+        print("OpenAI client not configured or invalid API key. Skipping LLM parsing.")
         return []
         
     prompt = f"""
