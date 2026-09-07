@@ -35,7 +35,7 @@ def parse_text_with_llm(text: str) -> list:
         print("No OpenAI API KEY found. Skipping LLM parsing.")
         return []
         
-    prompt = f\"\"\"
+    prompt = f"""
     Eres un experto analizador de inventarios. Extrae los items de inventario del siguiente texto.
     Devuelve estrictamente un array de objetos JSON con las siguientes claves:
     - codigo (string, opcional)
@@ -47,8 +47,8 @@ def parse_text_with_llm(text: str) -> list:
     - ubicacion (string, opcional)
     
     Texto:
-    {text[:4000]} # Limit to avoid token overflow for this example
-    \"\"\"
+    {text[:4000]}
+    """
     
     try:
         response = client.chat.completions.create(
