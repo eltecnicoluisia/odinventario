@@ -37,7 +37,24 @@ VENEZUELA_STATES = [
 
 def seed_defaults():
     from database import SessionLocal
-    db = SessionLocal()
+    from sqlalchemy import text
+    import time
+
+    db = None
+    for attempt in range(15):
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            break
+        except Exception as e:
+            print(f"[*] Esperando que PostgreSQL esté listo (intento {attempt+1}/15): {e}")
+            if db:
+                db.close()
+            time.sleep(2)
+    else:
+        print("[!] No se pudo conectar a PostgreSQL tras 15 intentos.")
+        return
+
     try:
         # Seed Categories if empty
         if db.query(models.Category).count() == 0:
