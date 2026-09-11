@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, text
 from typing import List, Optional
+import os
+import re
 
 from database import engine, get_db, Base
 import models
@@ -119,9 +121,23 @@ seed_defaults()
 
 app = FastAPI(title="OdInventario API")
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8088",
+    "http://127.0.0.1:8088",
+    "http://192.168.100.2",
+    "http://192.168.100.2:8088",
+    "https://eltecnicoluisia.github.io",
+]
+env_origins = os.getenv("ALLOWED_ORIGINS")
+if env_origins:
+    ALLOWED_ORIGINS.extend([o.strip() for o in env_origins.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"^https:\/\/.*\.trycloudflare\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -510,10 +526,26 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 @app.post("/items/upload")
 async def upload_inventory_file(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    file: UploadFile = File(...)
 ):
+    ALLOWED_EXTENSIONS = {'.xlsx', '.xls', '.pdf', '.docx', '.doc'}
+    filename = file.filename or "archivo"
+    ext = os.path.splitext(filename)[1].lower()
+    
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato no permitido. Solo se admiten archivos: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+        )
+    
+    # Max file size limit: 15 MB
+    MAX_FILE_SIZE = 15 * 1024 * 1024
     contents = await file.read()
-    filename = file.filename
-    background_tasks.add_task(process_uploaded_file, contents, filename, db)
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="El archivo excede el tamaño máximo permitido de 15MB."
+        )
+    
+    background_tasks.add_task(process_uploaded_file, contents, filename)
     return {"message": f"Archivo '{filename}' recibido. Procesando renglones con IA e insertando en base de datos."}
